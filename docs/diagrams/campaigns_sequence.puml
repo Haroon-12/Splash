@@ -1,0 +1,13 @@
+@startuml
+actor Brand
+participant Frontend
+participant API
+participant DB
+Brand -> Frontend: Create campaign
+Frontend -> API: POST /api/campaigns {data}
+API -> DB: INSERT campaign
+DB --> API: campaignId
+API --> Frontend: 201 Created
+FrontEnd -> Frontend: if AI generation -> POST /api/ads/generate
+API -> DB: save draft
+@enduml

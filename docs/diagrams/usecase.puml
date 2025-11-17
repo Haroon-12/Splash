@@ -1,0 +1,18 @@
+@startuml
+left to right direction
+actor Brand
+actor Influencer
+actor Admin
+
+rectangle "Platform" {
+  Brand --> (Browse Influencers)
+  Brand --> (Start Conversation)
+  Brand --> (Generate Ad)
+  Influencer --> (Browse Brands)
+  Influencer --> (Respond to Conversation)
+  Admin --> (Approve Accounts)
+}
+
+(Browse Influencers) ..> (Start Conversation): includes
+
+@enduml

@@ -1,0 +1,8 @@
+@startuml
+start
+:Admin opens Admin panel;
+:View pending user approvals;
+:Approve / reject users;
+:View reports / logs;
+stop
+@enduml

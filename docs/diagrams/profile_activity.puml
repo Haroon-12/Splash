@@ -1,0 +1,8 @@
+@startuml
+start
+:User opens profile settings;
+:Edit profile fields and socials;
+:Upload image -> save;
+:Set privacy and notification preferences;
+stop
+@enduml

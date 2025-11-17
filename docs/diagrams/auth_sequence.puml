@@ -1,0 +1,12 @@
+@startuml
+actor User
+participant "Frontend" as FE
+participant "Auth API" as API
+participant "DB" as DB
+User -> FE: Open login
+FE -> API: POST /api/auth/login {email,password}
+API -> DB: validate credentials
+DB --> API: user record
+API -> FE: 200 OK + token
+FE -> User: redirect to dashboard
+@enduml

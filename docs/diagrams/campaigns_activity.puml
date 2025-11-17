@@ -1,0 +1,11 @@
+@startuml
+start
+:Brand opens Campaigns;
+:Create new campaign -> fill details;
+if (Use AI?) then (yes)
+  :Open Ad Generation -> request AI
+  :Receive ad draft -> save as draft
+endif
+:Assign influencers or publish campaign;
+stop
+@enduml

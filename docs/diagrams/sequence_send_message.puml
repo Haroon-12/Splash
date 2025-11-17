@@ -1,0 +1,13 @@
+@startuml
+actor User
+participant Frontend
+participant API
+database DB
+
+User -> Frontend: Type message and press Send
+Frontend -> API: POST /api/conversations/{id}/messages
+API -> DB: INSERT message
+DB --> API: messageId
+API -> Frontend: 201 Created {message}
+Frontend -> Frontend: Append message to UI
+@enduml

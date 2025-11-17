@@ -1,0 +1,14 @@
+@startuml
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v14.0/Advanced/AWSCommon.puml
+left to right direction
+actor User
+rectangle "Web App (Next.js)" as Web
+rectangle "API Layer" as API
+database "Database (Postgres)" as DB
+User -> Web: browse / message / create ad
+Web -> API: REST calls
+API -> DB: queries
+DB --> API: data
+API --> Web: JSON
+Web --> User: UI
+@enduml

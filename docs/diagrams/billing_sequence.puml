@@ -1,0 +1,12 @@
+@startuml
+actor User
+participant Frontend
+participant PaymentGateway
+participant API
+participant DB
+User -> Frontend: Choose plan
+Frontend -> PaymentGateway: Checkout
+PaymentGateway -> Frontend: success
+Frontend -> API: POST /api/billing/confirm {transaction}
+API -> DB: update subscription
+@enduml

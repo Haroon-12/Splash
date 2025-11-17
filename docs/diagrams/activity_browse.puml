@@ -1,0 +1,12 @@
+@startuml
+start
+:User opens Browse page;
+:Enter search query and filters;
+if (Results exist?) then (yes)
+  :Display results as cards;
+  :User clicks "View Profile" or "Message";
+else (no)
+  :Show "No results found" message;
+endif
+stop
+@enduml

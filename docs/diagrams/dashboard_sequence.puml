@@ -1,0 +1,11 @@
+@startuml
+actor User
+participant Frontend
+participant API
+User -> Frontend: Open dashboard
+Frontend -> API: GET /api/dashboard/metrics
+API -> DB: query metrics
+DB --> API: metrics
+API --> Frontend: JSON
+Frontend -> User: render dashboard
+@enduml

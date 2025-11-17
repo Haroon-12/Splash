@@ -1,0 +1,9 @@
+@startuml
+start
+:Open Messages list;
+:Select conversation;
+:Messages load (oldest->newest);
+:User reads messages -> messages marked read;
+:User types reply -> Send -> append to list;
+stop
+@enduml

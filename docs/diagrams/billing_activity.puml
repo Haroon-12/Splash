@@ -1,0 +1,8 @@
+@startuml
+start
+:User opens Billing page;
+:Select plan or view invoices;
+:If purchasing -> redirect to payment provider;
+:On success -> update subscription status;
+stop
+@enduml

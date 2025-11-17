@@ -1,0 +1,22 @@
+@startuml
+package "Frontend (Next.js)" {
+  [Browse Pages]
+  [Messaging UI]
+  [Ad Generation UI]
+}
+package "Backend (API)" {
+  [Auth API]
+  [Directory API]
+  [Conversations API]
+  [Campaigns API]
+}
+package "Database" {
+  [Postgres/Drizzle]
+}
+[Browse Pages] --> [Directory API]
+[Messaging UI] --> [Conversations API]
+[Ad Generation UI] --> [Campaigns API]
+[Conversations API] --> [Postgres/Drizzle]
+[Directory API] --> [Postgres/Drizzle]
+[Auth API] --> [Postgres/Drizzle]
+@enduml

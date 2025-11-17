@@ -1,0 +1,8 @@
+@startuml
+start
+:User visits Dashboard;
+:System fetches metrics and quick actions;
+:Render cards (Browse, Messages, Generate Ad);
+:User clicks a card -> navigate to module page;
+stop
+@enduml

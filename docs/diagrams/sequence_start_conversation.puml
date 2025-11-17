@@ -1,0 +1,17 @@
+@startuml
+actor Brand
+participant "Frontend" as FE
+participant "Conversations API" as API
+participant "Database" as DB
+
+Brand -> FE: Click 'Message' on profile
+FE -> API: POST /api/conversations {userId, otherId}
+API -> DB: INSERT conversation
+DB --> API: conversationId
+API --> FE: 201 Created {conversationId}
+FE -> FE: navigate to conversation view
+FE -> API: POST /api/conversations/{id}/messages {content}
+API -> DB: INSERT message
+DB --> API: messageId
+API --> FE: 201 Created {message}
+@enduml

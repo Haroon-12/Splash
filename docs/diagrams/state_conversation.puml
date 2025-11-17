@@ -1,0 +1,7 @@
+@startuml
+[*] --> Idle
+Idle --> MessageSent : send message
+MessageSent --> Delivered : delivery_acknowledged
+Delivered --> Read : user_opened_conversation
+Read --> Idle
+@enduml

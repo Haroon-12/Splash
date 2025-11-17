@@ -1,0 +1,39 @@
+@startuml
+class User {
+  id: UUID
+  name: string
+  email: string
+  userType: enum
+  image: string
+}
+
+class Profile {
+  id: UUID
+  name: string
+  category: string
+  socials: JSON
+  isPlatformUser: boolean
+  platformUserId: UUID
+}
+
+class Conversation {
+  id: UUID
+  participant1Id: UUID
+  participant2Id: UUID
+  lastMessageAt: DateTime
+}
+
+class Message {
+  id: UUID
+  conversationId: UUID
+  senderId: UUID
+  content: text
+  createdAt: DateTime
+  readAt: DateTime
+}
+
+User "1" -- "*" Profile : owns
+User "1" -- "*" Conversation : participates
+Conversation "1" -- "*" Message : contains
+
+@enduml

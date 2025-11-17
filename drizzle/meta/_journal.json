@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1759513336164,
+      "tag": "0000_tiresome_sugar_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1759513633631,
+      "tag": "0001_loving_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1759685290150,
+      "tag": "0002_silky_ronan",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1759733334875,
+      "tag": "0003_glorious_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1760817505837,
+      "tag": "0004_amazing_speed",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1760882528077,
+      "tag": "0005_third_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1760915428328,
+      "tag": "0006_moaning_invaders",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1760916963154,
+      "tag": "0007_material_legion",
+      "breakpoints": true
+    }
+  ]
+}

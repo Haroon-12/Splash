@@ -1,0 +1,11 @@
+@startuml
+actor User
+participant Frontend
+participant API
+participant DB
+User -> Frontend: Edit profile
+Frontend -> API: PUT /api/users/{id} {profile}
+API -> DB: update profile
+DB --> API: 200
+API --> Frontend: 200 OK
+@enduml

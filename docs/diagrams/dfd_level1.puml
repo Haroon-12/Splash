@@ -1,0 +1,16 @@
+@startuml
+left to right direction
+actor User
+rectangle "Browse Module" as Browse
+rectangle "Messaging Module" as Msg
+rectangle "Ad Module" as Ad
+database "DB" as DB
+User -> Browse: search/filter
+Browse -> DB: query profiles
+DB --> Browse: profiles
+User -> Msg: view conversations
+Msg -> DB: fetch conversations/messages
+DB --> Msg: conversation data
+User -> Ad: create draft
+Ad -> DB: save draft
+@enduml

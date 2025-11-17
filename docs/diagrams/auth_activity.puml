@@ -1,0 +1,15 @@
+@startuml
+start
+:Open login/register page;
+if (New user?) then (yes)
+  :Fill registration form;
+  :Submit -> create account;
+else (no)
+  :Enter credentials -> submit;
+  if (2FA?) then (yes)
+    :Prompt 2FA;
+  endif
+endif
+:On success -> redirect to dashboard;
+stop
+@enduml

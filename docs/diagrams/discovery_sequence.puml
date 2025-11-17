@@ -1,0 +1,12 @@
+@startuml
+actor User
+participant Frontend
+participant API
+participant DB
+User -> Frontend: Open Browse
+Frontend -> API: GET /api/directory?query=...
+API -> DB: SELECT profiles
+DB --> API: profiles
+API --> Frontend: JSON profiles
+Frontend -> User: render cards
+@enduml

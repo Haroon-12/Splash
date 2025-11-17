@@ -1,0 +1,8 @@
+@startuml
+[*] --> Draft
+Draft --> Active : Publish
+Active --> Completed : Ended
+Active --> Paused : Pause
+Paused --> Active : Resume
+Draft --> Deleted : Delete
+@enduml

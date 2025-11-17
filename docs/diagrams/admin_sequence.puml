@@ -1,0 +1,14 @@
+@startuml
+actor Admin
+participant Frontend
+participant API
+participant DB
+Admin -> Frontend: Open user list
+Frontend -> API: GET /api/admin/users?status=pending
+API -> DB: SELECT users
+DB --> API: users
+API --> Frontend: JSON
+Admin -> Frontend: Approve user
+Frontend -> API: POST /api/admin/users/{id}/approve
+API -> DB: update user
+@enduml
