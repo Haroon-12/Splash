@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { matchesSearch } from '@/lib/search-utils';
 
 // Interface for CSV influencer data
 interface CSVInfluencer {
@@ -81,71 +82,25 @@ export async function GET(request: NextRequest) {
     
     const csvData = getCSVData();
     
-    // Find matching record using multiple criteria
+    // Find matching record using the same search logic as browse page
+    // Priority: name first, then email (same as browse page)
+    // Only check name and email - no other fields (no filters, no recommendations)
     const match = csvData.find(record => {
-      // Email matching (exact or partial)
-      const emailMatch = email && record.Email && record.Email.trim() !== '' && 
-        (record.Email.toLowerCase().includes(email.toLowerCase()) ||
-         email.toLowerCase().includes(record.Email.toLowerCase()));
-      
-      // Name matching (exact, partial, or word-by-word)
-      let nameMatch = false;
-      if (name && record.Name) {
-        const csvName = record.Name.toLowerCase().trim();
-        const searchName = name.toLowerCase().trim();
-        
-        // Exact match
-        if (csvName === searchName) {
-          nameMatch = true;
-        }
-        // Partial match (CSV name contains search name)
-        else if (csvName.includes(searchName)) {
-          nameMatch = true;
-        }
-        // Partial match (search name contains CSV name)
-        else if (searchName.includes(csvName)) {
-          nameMatch = true;
-        }
-        // Word-by-word matching for compound names
-        else {
-          const csvWords = csvName.split(/\s+/);
-          const searchWords = searchName.split(/\s+/);
-          
-          // Check if any significant words match (ignore single letters)
-          const significantCsvWords = csvWords.filter(word => word.length > 1);
-          const significantSearchWords = searchWords.filter(word => word.length > 1);
-          
-          const hasSignificantMatch = significantCsvWords.some(csvWord => 
-            significantSearchWords.some(searchWord => 
-              csvWord.includes(searchWord) || searchWord.includes(csvWord)
-            )
-          );
-          
-          if (hasSignificantMatch) {
-            nameMatch = true;
-          }
-        }
+      // PRIORITY 1: Check name first
+      const nameMatch = name && record.Name && matchesSearch(record.Name, name);
+      if (nameMatch) {
+        return true; // Name matches - include this record
       }
       
-      // Social media matching (exact or partial URL matching)
-      const instagramMatch = instagram && record.Instagram && record.Instagram.trim() !== '' &&
-        (record.Instagram.toLowerCase().includes(instagram.toLowerCase()) ||
-         instagram.toLowerCase().includes(record.Instagram.toLowerCase()));
+      // PRIORITY 2: If name doesn't match, check email
+      const emailMatch = email && record.Email && record.Email.trim() !== '' && 
+        matchesSearch(record.Email, email);
+      if (emailMatch) {
+        return true; // Email matches - include this record
+      }
       
-      const youtubeMatch = youtube && record.YouTube && record.YouTube.trim() !== '' &&
-        (record.YouTube.toLowerCase().includes(youtube.toLowerCase()) ||
-         youtube.toLowerCase().includes(record.YouTube.toLowerCase()));
-      
-      const facebookMatch = facebook && record.Facebook && record.Facebook.trim() !== '' &&
-        (record.Facebook.toLowerCase().includes(facebook.toLowerCase()) ||
-         facebook.toLowerCase().includes(record.Facebook.toLowerCase()));
-      
-      const tiktokMatch = tiktok && record.TikTok && record.TikTok.trim() !== '' &&
-        (record.TikTok.toLowerCase().includes(tiktok.toLowerCase()) ||
-         tiktok.toLowerCase().includes(record.TikTok.toLowerCase()));
-      
-      // Return true if ANY field matches
-      return emailMatch || nameMatch || instagramMatch || youtubeMatch || facebookMatch || tiktokMatch;
+      // Neither name nor email matches - exclude this record
+      return false;
     });
     
     if (!match) {

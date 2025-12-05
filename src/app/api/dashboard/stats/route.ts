@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { user, influencerProfiles, notifications, messages, conversations } from '@/db/schema';
+import { user, influencerProfiles, notifications, messages, conversations, campaigns, collaborations } from '@/db/schema';
 import { eq, and, or } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
 import { getAllClaims } from '@/lib/file-claims-store';
@@ -135,22 +135,71 @@ export async function GET(request: NextRequest) {
         }
       }
       
+      // Get campaigns where influencer is part of collaborations
+      const influencerCollaborations = await db.query.collaborations.findMany({
+        where: eq(collaborations.influencerId, userId)
+      });
+      
+      // Count active campaigns (campaigns with active collaborations)
+      const activeCampaigns = influencerCollaborations.filter(c => c.status === 'active').length;
+      
       return NextResponse.json({
         profileCompleteness,
         notificationsCount,
         messagesCount,
-        hasProfile: !!profile
+        hasProfile: !!profile,
+        activeCampaigns
       });
 
     } else if (userType === 'brand') {
       // Brand dashboard stats
       const userId = currentUser.id;
       
-      // Placeholder stats for brands
-      const activeCampaigns = 0;
-      const influencersConnected = 0;
-      const messagesCount = 0;
-      const totalROI = 0;
+      // Get active campaigns (status = 'active')
+      const allCampaigns = await db.query.campaigns.findMany({
+        where: eq(campaigns.brandId, userId)
+      });
+      const activeCampaigns = allCampaigns.filter(c => c.status === 'active').length;
+      
+      // Get unique influencers connected through collaborations
+      const allCollaborations = await db.query.collaborations.findMany({
+        where: eq(collaborations.brandId, userId)
+      });
+      const uniqueInfluencerIds = new Set(
+        allCollaborations
+          .filter(c => c.status === 'active' || c.status === 'completed')
+          .map(c => c.influencerId)
+      );
+      const influencersConnected = uniqueInfluencerIds.size;
+      
+      // Get conversations where brand is a participant
+      const userConversations = await db.query.conversations.findMany({
+        where: or(
+          eq(conversations.participant1Id, userId),
+          eq(conversations.participant2Id, userId)
+        )
+      });
+      
+      // Get unread messages count across all conversations
+      let messagesCount = 0;
+      for (const conversation of userConversations) {
+        const unreadMessages = await db.query.messages.findMany({
+          where: and(
+            eq(messages.conversationId, conversation.id),
+            eq(messages.isRead, false)
+          )
+        });
+        
+        // Filter out messages sent by the current user
+        const messagesToUser = unreadMessages.filter(msg => msg.senderId !== userId);
+        messagesCount += messagesToUser.length;
+      }
+      
+      // Calculate total ROI from completed collaborations
+      // For now, we'll use a placeholder calculation based on completed collaborations
+      // In a real system, this would come from performance metrics
+      const completedCollaborations = allCollaborations.filter(c => c.status === 'completed');
+      const totalROI = completedCollaborations.length * 100; // Placeholder: $100 per completed collaboration
       
       return NextResponse.json({
         activeCampaigns,

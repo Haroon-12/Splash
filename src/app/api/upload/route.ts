@@ -12,14 +12,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      return NextResponse.json({ error: 'Only images and PDFs are allowed' }, { status: 400 });
+    // Validate file type (images, PDFs, audio for voice notes)
+    const allowedTypes = [
+      'image/', // All image types
+      'application/pdf', // PDF documents
+      'audio/', // Audio files for voice notes
+      'application/msword', // .doc
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    ];
+    
+    const isValidType = allowedTypes.some(type => 
+      file.type.startsWith(type) || file.type === type
+    );
+    
+    if (!isValidType) {
+      return NextResponse.json({ 
+        error: 'Only images, PDFs, documents, and audio files are allowed' 
+      }, { status: 400 });
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File size must be less than 10MB' }, { status: 400 });
+    // Validate file size (max 10MB for images/documents, 5MB for audio)
+    const maxSize = file.type.startsWith('audio/') ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      const maxSizeMB = maxSize / (1024 * 1024);
+      return NextResponse.json({ 
+        error: `File size must be less than ${maxSizeMB}MB` 
+      }, { status: 400 });
     }
 
     // Create uploads directory if it doesn't exist

@@ -212,7 +212,7 @@ export function NotificationBell() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="absolute right-0 top-12 w-80 bg-card border border-border rounded-lg shadow-lg z-50"
+              className="fixed right-4 top-16 lg:right-6 lg:top-20 z-50 w-[90vw] sm:w-96 max-w-md bg-card border border-border rounded-lg shadow-lg"
             >
               <Card className="border-0 shadow-none">
                 <CardHeader className="pb-3">

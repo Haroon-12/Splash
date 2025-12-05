@@ -55,6 +55,11 @@ export async function GET(
         conversationId: messages.conversationId,
         senderId: messages.senderId,
         content: messages.content,
+        attachmentType: messages.attachmentType,
+        attachmentUrl: messages.attachmentUrl,
+        attachmentName: messages.attachmentName,
+        attachmentSize: messages.attachmentSize,
+        isRead: messages.isRead,
         readAt: messages.readAt,
         createdAt: messages.createdAt,
         sender: {

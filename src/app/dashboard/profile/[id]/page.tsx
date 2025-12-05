@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PlatformLayout } from "@/components/platform/platform-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,9 +72,13 @@ interface InfluencerProfile {
 export default function InfluencerProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [profile, setProfile] = useState<InfluencerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Check if we came from product recommendations
+  const fromProductRecommendations = searchParams.get('from') === 'product-recommendations';
 
   useEffect(() => {
     fetchProfile();
@@ -87,12 +91,23 @@ export default function InfluencerProfilePage() {
       if (!response.ok) throw new Error("Failed to fetch influencers");
       
       const influencers = await response.json();
-      const influencer = influencers.find((inf: InfluencerProfile) => 
-        inf.csvRecordId === params.id || 
-        inf.userId === params.id ||
-        inf.name === params.id ||
-        inf.email === params.id
-      );
+      const idString = decodeURIComponent(params.id as string);
+      const influencer = influencers.find((inf: InfluencerProfile) => {
+        // Check various ID formats
+        if (inf.csvRecordId === params.id || inf.csvRecordId === idString) return true;
+        if (inf.userId === params.id || inf.userId === idString) return true;
+        if (inf.name === params.id || inf.name === idString) return true;
+        if (inf.email === params.id || inf.email === idString) return true;
+        
+        // Check if params.id is a CSV ID (csv-Name or csv-email)
+        if (idString.startsWith('csv-')) {
+          const identifier = idString.substring(4); // Remove "csv-" prefix
+          if (inf.name === identifier || inf.email === identifier) return true;
+          if (inf.csvRecordId && inf.csvRecordId.includes(identifier)) return true;
+        }
+        
+        return false;
+      });
       
       if (influencer) {
         setProfile(influencer);
@@ -104,11 +119,31 @@ export default function InfluencerProfilePage() {
         // Try different search strategies
         const searchParams = new URLSearchParams();
         
-        // If it looks like a csvRecordId (Name-email format)
-        if (idString.includes('-')) {
-          const [name, email] = idString.split('-');
-          if (name) searchParams.set('name', name);
-          if (email && email !== 'no-email') searchParams.set('email', email);
+        // Check if it's a CSV ID (starts with "csv-")
+        if (idString.startsWith('csv-')) {
+          // Remove "csv-" prefix
+          const identifier = idString.substring(4);
+          
+          // If it contains an email (has @), use email
+          if (identifier.includes('@')) {
+            searchParams.set('email', identifier);
+          } else {
+            // Otherwise, treat as name
+            searchParams.set('name', identifier);
+          }
+        } else if (idString.includes('-')) {
+          // If it looks like a csvRecordId (Name-email format, but not starting with csv-)
+          const parts = idString.split('-');
+          // Last part might be email, rest is name
+          const lastPart = parts[parts.length - 1];
+          if (lastPart.includes('@')) {
+            // Last part is email
+            searchParams.set('email', lastPart);
+            searchParams.set('name', parts.slice(0, -1).join(' '));
+          } else {
+            // All parts together are the name
+            searchParams.set('name', idString);
+          }
         } else {
           // Try as name or email directly
           if (idString.includes('@')) {
@@ -314,7 +349,14 @@ export default function InfluencerProfilePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.back()}
+              onClick={() => {
+                // If we came from product recommendations, go back to that page with recommendations shown
+                if (fromProductRecommendations) {
+                  router.push('/dashboard/products/recommend?showRecommendations=true');
+                } else {
+                  router.back();
+                }
+              }}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back

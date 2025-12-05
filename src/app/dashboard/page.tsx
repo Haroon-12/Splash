@@ -111,10 +111,10 @@ export default function DashboardPage() {
         { label: "Total ROI", value: `$${stats?.totalROI || "0"}`, icon: TrendingUp, color: "text-orange-500" },
       ]
     : [
+        { label: "Active Campaigns", value: stats?.activeCampaigns?.toString() || "0", icon: Sparkles, color: "text-purple-500" },
         { label: "Profile Completeness", value: `${stats?.profileCompleteness || "0"}%`, icon: Edit3, color: "text-blue-500" },
         { label: "Notifications", value: stats?.notificationsCount?.toString() || "0", icon: MessageSquare, color: "text-yellow-500" },
         { label: "Messages", value: stats?.messagesCount?.toString() || "0", icon: MessageSquare, color: "text-green-500" },
-        { label: "Profile Status", value: stats?.hasProfile ? "Complete" : "Incomplete", icon: CheckCircle, color: stats?.hasProfile ? "text-green-500" : "text-red-500" },
       ];
 
   const quickActions = userType === "admin"
@@ -151,55 +151,76 @@ export default function DashboardPage() {
     : userType === "brand"
     ? [
         {
+          title: "My Campaigns",
+          description: "View and manage your campaigns",
+          href: "/dashboard/campaigns",
+          icon: Sparkles,
+          gradient: "from-purple-500 to-pink-500",
+        },
+        {
+          title: "Create Campaign",
+          description: "Create a campaign and get AI-powered influencer recommendations",
+          href: "/dashboard/campaigns/create",
+          icon: Sparkles,
+          gradient: "from-blue-500 to-cyan-500",
+        },
+        {
+          title: "Product Recommendations",
+          description: "Get influencer recommendations based on your product",
+          href: "/dashboard/products/recommend",
+          icon: Sparkles,
+          gradient: "from-green-500 to-emerald-500",
+        },
+        {
           title: "Find Influencers",
           description: "Browse and connect with influencers",
           href: "/dashboard/browse-influencers",
           icon: Users,
-          gradient: "from-blue-500 to-cyan-500",
+          gradient: "from-orange-500 to-red-500",
         },
         {
           title: "Generate Ad",
           description: "Create AI-powered marketing content",
           href: "/ads",
           icon: Sparkles,
-          gradient: "from-purple-500 to-pink-500",
-        },
-        {
-          title: "View Analytics",
-          description: "Track campaign performance and ROI",
-          href: "/analytics",
-          icon: BarChart3,
-          gradient: "from-orange-500 to-red-500",
+          gradient: "from-indigo-500 to-purple-500",
         },
       ]
     : [
+        {
+          title: "Browse Active Campaigns",
+          description: "Discover active campaigns from brands",
+          href: "/dashboard/campaigns/browse",
+          icon: Sparkles,
+          gradient: "from-purple-500 to-pink-500",
+        },
+        {
+          title: "My Campaigns",
+          description: "View campaigns you're part of",
+          href: "/dashboard/campaigns",
+          icon: Sparkles,
+          gradient: "from-blue-500 to-cyan-500",
+        },
         {
           title: "Browse Brands",
           description: "Discover partnership opportunities",
           href: "/dashboard/browse-brands",
           icon: Users,
-          gradient: "from-blue-500 to-cyan-500",
+          gradient: "from-green-500 to-emerald-500",
         },
         {
           title: "Edit Profile",
           description: "Update your profile information",
           href: "/dashboard/profile/edit",
           icon: Edit3,
-          gradient: "from-green-500 to-emerald-500",
+          gradient: "from-orange-500 to-red-500",
         },
         {
           title: "Messages",
           description: "Connect with brands",
           href: "/messages",
           icon: MessageSquare,
-          gradient: "from-purple-500 to-pink-500",
-        },
-        {
-          title: "My Campaigns",
-          description: "View your active collaborations",
-          href: "/dashboard/browse-brands",
-          icon: Sparkles,
-          gradient: "from-orange-500 to-red-500",
+          gradient: "from-indigo-500 to-purple-500",
         },
       ];
 

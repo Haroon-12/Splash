@@ -4,6 +4,7 @@ import { user, influencerProfiles, profileClaims, notifications } from '@/db/sch
 import { eq, and } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
+import { matchesSearch } from '@/lib/search-utils';
 
 // Interface for CSV influencer data
 interface CSVInfluencer {
@@ -132,52 +133,24 @@ export async function POST(request: NextRequest) {
     
     const csvData = getCSVData();
     
-    // Find matching records with improved matching logic
+    // Find matching records using the same search logic as browse page
+    // Priority: name first, then email (same as browse page)
     const matches = csvData.filter(record => {
-      // Email matching (if email exists in CSV and user provided email)
-      const emailMatch = email && record.Email && record.Email.trim() !== '' && 
-        record.Email.toLowerCase().includes(email.toLowerCase());
-      
-      // Name matching with multiple strategies
-      let nameMatch = false;
-      if (name && record.Name) {
-        const csvName = record.Name.toLowerCase().trim();
-        const userName = name.toLowerCase().trim();
-        
-        // Exact match
-        if (csvName === userName) {
-          nameMatch = true;
-        }
-        // Partial match (CSV name contains user name)
-        else if (csvName.includes(userName)) {
-          nameMatch = true;
-        }
-        // Partial match (user name contains CSV name)
-        else if (userName.includes(csvName)) {
-          nameMatch = true;
-        }
-        // Word-by-word matching for compound names
-        else {
-          const csvWords = csvName.split(/\s+/);
-          const userWords = userName.split(/\s+/);
-          
-          // Check if any significant words match (ignore single letters)
-          const significantCsvWords = csvWords.filter(word => word.length > 1);
-          const significantUserWords = userWords.filter(word => word.length > 1);
-          
-          const hasSignificantMatch = significantCsvWords.some(csvWord => 
-            significantUserWords.some(userWord => 
-              csvWord.includes(userWord) || userWord.includes(csvWord)
-            )
-          );
-          
-          if (hasSignificantMatch) {
-            nameMatch = true;
-          }
-        }
+      // PRIORITY 1: Check name first
+      const nameMatch = name && record.Name && matchesSearch(record.Name, name);
+      if (nameMatch) {
+        return true; // Name matches - include this record
       }
       
-      return emailMatch || nameMatch;
+      // PRIORITY 2: If name doesn't match, check email
+      const emailMatch = email && record.Email && record.Email.trim() !== '' && 
+        matchesSearch(record.Email, email);
+      if (emailMatch) {
+        return true; // Email matches - include this record
+      }
+      
+      // Neither name nor email matches - exclude this record
+      return false;
     });
     
     return NextResponse.json({

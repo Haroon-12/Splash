@@ -57,6 +57,27 @@
       "when": 1760916963154,
       "tag": "0007_material_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1764367597805,
+      "tag": "0008_broken_ogun",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1764370627375,
+      "tag": "0009_tense_risque",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1764440556236,
+      "tag": "0010_aberrant_revanche",
+      "breakpoints": true
     }
   ]
 }

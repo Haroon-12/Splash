@@ -88,6 +88,10 @@ export const messages = sqliteTable("messages", {
   conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   senderId: text("sender_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
+  attachmentType: text("attachment_type"), // 'image', 'document', 'voice'
+  attachmentUrl: text("attachment_url"), // URL to the file
+  attachmentName: text("attachment_name"), // Original filename
+  attachmentSize: integer("attachment_size"), // File size in bytes
   isRead: integer("is_read", { mode: "boolean" })
     .$defaultFn(() => false)
     .notNull(),
@@ -131,6 +135,8 @@ export const influencerProfiles = sqliteTable("influencer_profiles", {
   contentPreferences: text("content_preferences"), // JSON string for content types
   geographicReach: text("geographic_reach"), // JSON string for locations
   verificationBadges: text("verification_badges"), // JSON string for verified platforms
+  embedding: text("embedding"), // JSON string for vector embedding
+  embeddingText: text("embedding_text"), // Text used to generate embedding
   lastProfileUpdate: integer("last_profile_update", { mode: "timestamp" }),
   profileCompleteness: integer("profile_completeness").$defaultFn(() => 0), // 0-100 percentage
   createdAt: integer("created_at", { mode: "timestamp" })
@@ -205,6 +211,102 @@ export const adminAccounts = sqliteTable("admin_accounts", {
     .$defaultFn(() => false)
     .notNull(),
   createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Brand profiles (extended info for brands)
+export const brandProfiles = sqliteTable("brand_profiles", {
+  id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  companyName: text("company_name"),
+  industry: text("industry"), // JSON string for multiple industries
+  description: text("description"),
+  website: text("website"),
+  logo: text("logo"),
+  targetAudience: text("target_audience"), // JSON string for demographics
+  preferredCategories: text("preferred_categories"), // JSON string for influencer categories
+  budgetRange: text("budget_range"), // JSON string for min/max budget
+  geographicFocus: text("geographic_focus"), // JSON string for locations
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Campaigns
+export const campaigns = sqliteTable("campaigns", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  brandId: text("brand_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  objectives: text("objectives"), // JSON string for campaign objectives
+  category: text("category").notNull(), // Influencer category needed
+  targetAudience: text("target_audience"), // JSON string for demographics
+  budget: text("budget"), // Budget amount
+  budgetRange: text("budget_range"), // JSON string for min/max
+  startDate: integer("start_date", { mode: "timestamp" }),
+  endDate: integer("end_date", { mode: "timestamp" }),
+  status: text("status").notNull().$defaultFn(() => "draft"), // draft, active, completed, paused, cancelled
+  requiredPlatforms: text("required_platforms"), // JSON string for platforms
+  contentRequirements: text("content_requirements"), // JSON string for content types
+  geographicTarget: text("geographic_target"), // JSON string for locations
+  minFollowers: integer("min_followers"),
+  maxFollowers: integer("max_followers"),
+  minEngagementRate: text("min_engagement_rate"), // Percentage as string
+  embedding: text("embedding"), // JSON string for vector embedding
+  embeddingText: text("embedding_text"), // Text used to generate embedding
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Products (for product-based recommendations)
+export const products = sqliteTable("products", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  brandId: text("brand_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // Product category
+  targetAudience: text("target_audience"), // JSON string for demographics
+  priceRange: text("price_range"), // JSON string for min/max price
+  features: text("features"), // JSON string for product features
+  useCases: text("use_cases"), // JSON string for use cases
+  brandValues: text("brand_values"), // JSON string for brand values
+  imageUrl: text("image_url"),
+  website: text("website"),
+  embedding: text("embedding"), // JSON string for vector embedding
+  embeddingText: text("embedding_text"), // Text used to generate embedding
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Collaborations (track past collaborations for learning)
+export const collaborations = sqliteTable("collaborations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  brandId: text("brand_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  influencerId: text("influencer_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  campaignId: integer("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
+  status: text("status").notNull().$defaultFn(() => "pending"), // pending, active, completed, cancelled
+  rating: integer("rating"), // 1-5 rating from brand
+  influencerRating: integer("influencer_rating"), // 1-5 rating from influencer
+  performanceMetrics: text("performance_metrics"), // JSON string for engagement, reach, etc.
+  notes: text("notes"),
+  startedAt: integer("started_at", { mode: "timestamp" }),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
     .$defaultFn(() => new Date())
     .notNull(),
 });

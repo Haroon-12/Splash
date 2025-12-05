@@ -5,22 +5,24 @@ import { eq } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
 
 // Get influencer profile
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Check if user is accessing their own profile or is admin
-    if (currentUser.id !== params.id && currentUser.userType !== 'admin') {
+    if (currentUser.id !== id && currentUser.userType !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const profile = await db
       .select()
       .from(influencerProfiles)
-      .where(eq(influencerProfiles.id, params.id))
+      .where(eq(influencerProfiles.id, id))
       .limit(1);
 
     if (profile.length === 0) {
@@ -106,15 +108,17 @@ export async function POST(request: NextRequest) {
 }
 
 // Update influencer profile
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Check if user is updating their own profile or is admin
-    if (currentUser.id !== params.id && currentUser.userType !== 'admin') {
+    if (currentUser.id !== id && currentUser.userType !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -128,7 +132,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         updatedAt: new Date(),
         lastProfileUpdate: new Date(),
       })
-      .where(eq(influencerProfiles.id, params.id))
+      .where(eq(influencerProfiles.id, id))
       .returning();
 
     if (updatedProfile.length === 0) {
@@ -142,7 +146,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         lastReminderSent: new Date(),
         reminderCount: 0, // Reset reminder count after update
       })
-      .where(eq(profileUpdateReminders.userId, params.id));
+      .where(eq(profileUpdateReminders.userId, id));
 
     return NextResponse.json({ 
       success: true, 

@@ -33,10 +33,11 @@ export async function PATCH(
       );
     }
 
-    // Update the message's readAt timestamp
+    // Update the message's isRead and readAt timestamp
     const updatedMessages = await db
       .update(messages)
       .set({
+        isRead: true,
         readAt: new Date(),
       })
       .where(eq(messages.id, parsedMessageId))

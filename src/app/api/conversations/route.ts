@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { conversations, user } from '@/db/schema';
+import { conversations, user, influencerProfiles } from '@/db/schema';
 import { eq, or, and, desc, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -65,14 +65,40 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    // Parse the JSON strings from SQLite
+    // Parse the JSON strings from SQLite and convert unreadCount to number
     const parsedResults = results.map(row => ({
       ...row,
       participant1: typeof row.participant1 === 'string' ? JSON.parse(row.participant1) : row.participant1,
       participant2: typeof row.participant2 === 'string' ? JSON.parse(row.participant2) : row.participant2,
+      unreadCount: typeof row.unreadCount === 'string' ? parseInt(row.unreadCount) || 0 : (row.unreadCount || 0),
     }));
 
-    return NextResponse.json(parsedResults, { status: 200 });
+    // Fetch profile images for influencers
+    const enrichedResults = await Promise.all(parsedResults.map(async (row) => {
+      // Check participant1 profile image
+      if (row.participant1?.userType === 'influencer') {
+        const profile1 = await db.query.influencerProfiles.findFirst({
+          where: eq(influencerProfiles.id, row.participant1.id)
+        });
+        if (profile1?.imageUrl && !row.participant1.image) {
+          row.participant1.image = profile1.imageUrl;
+        }
+      }
+
+      // Check participant2 profile image
+      if (row.participant2?.userType === 'influencer') {
+        const profile2 = await db.query.influencerProfiles.findFirst({
+          where: eq(influencerProfiles.id, row.participant2.id)
+        });
+        if (profile2?.imageUrl && !row.participant2.image) {
+          row.participant2.image = profile2.imageUrl;
+        }
+      }
+
+      return row;
+    }));
+
+    return NextResponse.json(enrichedResults, { status: 200 });
   } catch (error) {
     console.error('GET error:', error);
     return NextResponse.json(

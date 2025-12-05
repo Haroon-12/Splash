@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { messages, user } from '@/db/schema';
+import { messages, user, conversations } from '@/db/schema';
 import { eq, or, and, desc } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { senderId, conversationId, content } = body;
+    const { senderId, conversationId, content, attachmentType, attachmentUrl, attachmentName, attachmentSize } = body;
 
     // Validation: senderId
     if (!senderId || typeof senderId !== 'string' || senderId.trim() === '') {
@@ -88,18 +88,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validation: content
-    if (!content || typeof content !== 'string' || content.trim() === '') {
+    // Validation: content or attachment required
+    if ((!content || typeof content !== 'string' || content.trim() === '') && !attachmentUrl) {
       return NextResponse.json(
         {
-          error: 'Message content is required',
+          error: 'Message content or attachment is required',
           code: 'MISSING_CONTENT',
         },
         { status: 400 }
       );
     }
 
-    const trimmedContent = content.trim();
+    const trimmedContent = (content || '').trim();
 
     // Validation: content length
     if (trimmedContent.length > 5000) {
@@ -136,10 +136,22 @@ export async function POST(request: NextRequest) {
         senderId: senderId.trim(),
         conversationId: conversationId,
         content: trimmedContent,
+        attachmentType: attachmentType || null,
+        attachmentUrl: attachmentUrl || null,
+        attachmentName: attachmentName || null,
+        attachmentSize: attachmentSize || null,
         isRead: false,
         createdAt: new Date(),
       })
       .returning();
+
+    // Update conversation's lastMessageAt
+    await db
+      .update(conversations)
+      .set({
+        lastMessageAt: new Date(),
+      })
+      .where(eq(conversations.id, conversationId));
 
     return NextResponse.json(newMessage[0], { status: 201 });
   } catch (error) {
