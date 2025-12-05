@@ -448,15 +448,15 @@ export default function BrowseInfluencersPage() {
         {/* Search and Filters */}
         <div className="space-y-4 mb-6 lg:mb-8">
           <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
                 placeholder="Search by name, email, category, description, or previous brands..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           </div>
           
           {isBrand && (
