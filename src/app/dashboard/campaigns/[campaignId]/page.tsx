@@ -109,12 +109,23 @@ export default function CampaignDetailPage() {
   };
 
   const handleStartConversation = async (influencerId: string) => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || !campaign) return;
+
+    // Prevent creating conversations with CSV-only influencers (no account)
+    if (influencerId.startsWith('csv-')) {
+      toast.error("This influencer doesn't have an account. Please view their profile for contact information.");
+      router.push(`/dashboard/profile/${encodeURIComponent(influencerId)}?from=campaign-${campaignId}`);
+      return;
+    }
 
     try {
       const token = localStorage.getItem("bearer_token");
       
-      const response = await fetch("/api/conversations", {
+      // Step 1: Create or get existing conversation
+      let conversationId: number;
+      let isNewConversation = false;
+      
+      const conversationResponse = await fetch("/api/conversations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -126,16 +137,70 @@ export default function CampaignDetailPage() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success("Conversation started!");
-        router.push(`/dashboard/chat?conversation=${data.conversation.id}`);
-      } else if (response.status === 409) {
-        const data = await response.json();
-        router.push(`/dashboard/chat?conversation=${data.conversationId}`);
+      if (conversationResponse.ok) {
+        const data = await conversationResponse.json();
+        conversationId = data.conversation.id;
+        isNewConversation = true; // New conversation created
+      } else if (conversationResponse.status === 409) {
+        const data = await conversationResponse.json();
+        conversationId = data.conversationId;
+        isNewConversation = false; // Conversation already exists
       } else {
-        throw new Error("Failed to start conversation");
+        const errorData = await conversationResponse.json().catch(() => ({}));
+        if (errorData.code === 'SQLITE_CONSTRAINT_FOREIGNKEY' || errorData.code === 'USER_NOT_FOUND') {
+          toast.error("This influencer doesn't have an account. Please view their profile for contact information.");
+          router.push(`/dashboard/profile/${encodeURIComponent(influencerId)}?from=campaign-${campaignId}`);
+          return;
+        } else {
+          throw new Error("Failed to start conversation");
+        }
       }
+
+      // Step 2: Send automatic greeting message with campaign details (only for new conversations)
+      if (isNewConversation) {
+        const brandName = (session.user as any).name || "We";
+        const campaignDetails = [
+          `Campaign: ${campaign.title}`,
+          campaign.description ? `Description: ${campaign.description}` : null,
+          campaign.category ? `Category: ${campaign.category}` : null,
+          campaign.budget ? `Budget: ${campaign.budget}` : null,
+        ].filter(Boolean).join('\n');
+
+        const greetingMessage = `Hi! I'm ${brandName} and I'm interested in collaborating with you for our campaign "${campaign.title}".
+
+${campaignDetails}
+
+We believe your content and audience align perfectly with our campaign goals. Would you be interested in discussing this collaboration opportunity? I'd love to share more details and answer any questions you might have.
+
+Looking forward to hearing from you!`;
+
+        const messageResponse = await fetch("/api/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            senderId: session.user.id,
+            conversationId: conversationId,
+            content: greetingMessage,
+          }),
+        });
+
+        if (!messageResponse.ok) {
+          console.error("Failed to send automatic message, but conversation was created");
+        }
+
+        toast.success("Message sent! Redirecting to chat...");
+      } else {
+        toast.success("Redirecting to chat...");
+      }
+      
+      // Step 3: Navigate to chat page
+      setTimeout(() => {
+        router.push(`/dashboard/chat?conversation=${conversationId}`);
+      }, 500);
+
     } catch (error) {
       console.error("Error starting conversation:", error);
       toast.error("Failed to start conversation");
@@ -377,13 +442,43 @@ export default function CampaignDetailPage() {
                         </div>
                       </div>
 
-                      <Button
-                        className="w-full"
-                        onClick={() => handleStartConversation(rec.influencerId)}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Contact
-                      </Button>
+                      {/* Check if influencer has account */}
+                      {(() => {
+                        const hasAccount = rec.influencer.profile?.dataSource !== 'csv' && 
+                                         rec.influencer.profile?.isPlatformUser !== false &&
+                                         !rec.influencerId.startsWith('csv-');
+                        
+                        return hasAccount ? (
+                          <Button
+                            className="w-full"
+                            onClick={() => handleStartConversation(rec.influencerId)}
+                          >
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Contact
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                router.push(`/dashboard/profile/${encodeURIComponent(rec.influencerId)}?from=campaign-${campaignId}`);
+                              }}
+                            >
+                              View Profile
+                            </Button>
+                            <Button
+                              className="w-full"
+                              disabled
+                              variant="secondary"
+                              title="This influencer doesn't have an account. View their profile to see contact information."
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              No Account - View Profile to Contact
+                            </Button>
+                          </div>
+                        );
+                      })()}
                     </motion.div>
                   ))}
                 </div>

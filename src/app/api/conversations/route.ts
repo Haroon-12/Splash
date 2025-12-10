@@ -134,6 +134,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if both participants exist in the user table (prevent foreign key constraint error)
+    // CSV-only influencers have IDs like "csv-email" and don't exist in user table
+    if (participant1Id.startsWith('csv-') || participant2Id.startsWith('csv-')) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot create conversation with influencer who does not have an account', 
+          code: 'USER_NOT_FOUND',
+          message: 'This influencer hasn\'t joined the platform yet. Please view their profile for contact information.'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Verify both users exist in the database
+    const [user1, user2] = await Promise.all([
+      db.select().from(user).where(eq(user.id, participant1Id)).limit(1),
+      db.select().from(user).where(eq(user.id, participant2Id)).limit(1),
+    ]);
+
+    if (user1.length === 0) {
+      return NextResponse.json(
+        { 
+          error: 'Participant 1 not found', 
+          code: 'USER_NOT_FOUND',
+          participantId: participant1Id
+        },
+        { status: 404 }
+      );
+    }
+
+    if (user2.length === 0) {
+      return NextResponse.json(
+        { 
+          error: 'Participant 2 not found', 
+          code: 'USER_NOT_FOUND',
+          participantId: participant2Id,
+          message: 'This influencer hasn\'t joined the platform yet. Please view their profile for contact information.'
+        },
+        { status: 404 }
+      );
+    }
+
     const existingConversation = await db
       .select()
       .from(conversations)

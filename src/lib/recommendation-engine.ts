@@ -148,18 +148,209 @@ function getAverageEngagementRate(profile: any): number {
 }
 
 /**
- * Check if two categories match
+ * Category synonyms and related terms for better matching
+ */
+const categorySynonyms: Record<string, string[]> = {
+  'fashion': ['style', 'clothing', 'apparel', 'wardrobe', 'outfit', 'trend', 'fashionista', 'fashionable'],
+  'beauty': ['cosmetics', 'makeup', 'skincare', 'cosmetic', 'beauty products', 'grooming', 'aesthetic'],
+  'lifestyle': ['life', 'living', 'wellness', 'wellbeing', 'daily life', 'routine'],
+  'fitness': ['health', 'workout', 'exercise', 'gym', 'training', 'athletic', 'sports', 'bodybuilding'],
+  'food': ['cooking', 'recipe', 'cuisine', 'culinary', 'restaurant', 'dining', 'gastronomy', 'baking'],
+  'travel': ['tourism', 'adventure', 'exploration', 'vacation', 'trip', 'journey', 'wanderlust'],
+  'technology': ['tech', 'gadgets', 'electronics', 'innovation', 'digital', 'software', 'hardware'],
+  'tech': ['technology', 'gadgets', 'electronics', 'innovation', 'digital', 'software', 'hardware', 'reviews', 'crypto'],
+  'gaming': ['games', 'video games', 'esports', 'gamer', 'streaming', 'twitch'],
+  'music': ['musician', 'singer', 'artist', 'audio', 'sound', 'song'],
+  'photography': ['photo', 'photographer', 'camera', 'visual', 'images', 'pictures'],
+  'education': ['learning', 'teaching', 'academic', 'study', 'knowledge', 'tutorial'],
+  'business': ['entrepreneur', 'startup', 'commerce', 'finance', 'investment', 'corporate'],
+  'parenting': ['family', 'kids', 'children', 'mom', 'dad', 'parent'],
+  'comedy': ['humor', 'funny', 'entertainment', 'comic', 'jokes'],
+  'diy': ['craft', 'handmade', 'creative', 'artisan', 'homemade', 'projects'],
+  'automotive': ['cars', 'vehicle', 'auto', 'driving', 'automobile'],
+  'pets': ['animals', 'dogs', 'cats', 'pet care', 'animal'],
+  'home decor': ['interior', 'decoration', 'furniture', 'design', 'home improvement'],
+};
+
+/**
+ * Normalize category string (remove special chars, trim, lowercase)
+ */
+function normalizeCategory(category: string): string {
+  return category
+    .toLowerCase()
+    .trim()
+    .replace(/[&,\/]/g, ' ') // Replace &, comma, and slash with space
+    .replace(/\s+/g, ' ') // Multiple spaces to single
+    .replace(/[^\w\s]/g, '') // Remove other special characters
+    .trim();
+}
+
+/**
+ * Extract words from category string
+ */
+function extractWords(category: string): string[] {
+  const normalized = normalizeCategory(category);
+  return normalized.split(/\s+/).filter(word => word.length > 2); // Filter out short words
+}
+
+/**
+ * Check if categories share common words
+ */
+function hasCommonWords(words1: string[], words2: string[]): boolean {
+  return words1.some(word1 => words2.some(word2 => 
+    word1 === word2 || 
+    word1.includes(word2) || 
+    word2.includes(word1)
+  ));
+}
+
+/**
+ * Check if a word matches any synonym
+ */
+function matchesSynonym(word: string, targetCategory: string): boolean {
+  const targetLower = normalizeCategory(targetCategory);
+  const synonyms = categorySynonyms[targetLower] || [];
+  
+  // Check direct match
+  if (synonyms.some(syn => syn === word || word.includes(syn) || syn.includes(word))) {
+    return true;
+  }
+  
+  // Check if word matches any synonym of target category
+  for (const [key, values] of Object.entries(categorySynonyms)) {
+    if (values.some(syn => syn === word || word.includes(syn) || syn.includes(word))) {
+      if (key === targetLower || targetLower.includes(key) || key.includes(targetLower)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Calculate word-based similarity score
+ */
+function calculateWordSimilarity(words1: string[], words2: string[]): number {
+  if (words1.length === 0 || words2.length === 0) return 0;
+  
+  let matches = 0;
+  let totalWords = Math.max(words1.length, words2.length);
+  
+  for (const word1 of words1) {
+    for (const word2 of words2) {
+      if (word1 === word2) {
+        matches += 2; // Exact word match
+      } else if (word1.includes(word2) || word2.includes(word1)) {
+        matches += 1.5; // Partial word match
+      } else if (matchesSynonym(word1, word2) || matchesSynonym(word2, word1)) {
+        matches += 1; // Synonym match
+      }
+    }
+  }
+  
+  // Calculate percentage based on matches
+  return Math.min(100, (matches / totalWords) * 50);
+}
+
+/**
+ * Check if two categories match with improved fuzzy matching
  */
 function categoryMatch(category1: string | null, category2: string | null): number {
   if (!category1 || !category2) return 0;
-  if (category1.toLowerCase() === category2.toLowerCase()) return 100;
   
-  // Partial match (e.g., "Fashion" matches "Fashion & Lifestyle")
-  const cat1Lower = category1.toLowerCase();
-  const cat2Lower = category2.toLowerCase();
+  const cat1Norm = normalizeCategory(category1);
+  const cat2Norm = normalizeCategory(category2);
   
-  if (cat1Lower.includes(cat2Lower) || cat2Lower.includes(cat1Lower)) {
-    return 70;
+  // 1. Exact match (after normalization)
+  if (cat1Norm === cat2Norm) {
+    return 100;
+  }
+  
+  // 2. One contains the other (high similarity)
+  if (cat1Norm.includes(cat2Norm) || cat2Norm.includes(cat1Norm)) {
+    // Calculate how much overlap
+    const shorter = cat1Norm.length < cat2Norm.length ? cat1Norm : cat2Norm;
+    const longer = cat1Norm.length >= cat2Norm.length ? cat1Norm : cat2Norm;
+    const overlapRatio = shorter.length / longer.length;
+    return Math.round(70 + (overlapRatio * 20)); // 70-90 points
+  }
+  
+  // 3. Word-based matching
+  const words1 = extractWords(category1);
+  const words2 = extractWords(category2);
+  
+  if (words1.length === 0 || words2.length === 0) {
+    // Fallback to substring check if no words extracted
+    if (cat1Norm.includes(cat2Norm.substring(0, Math.min(5, cat2Norm.length))) ||
+        cat2Norm.includes(cat1Norm.substring(0, Math.min(5, cat1Norm.length)))) {
+      return 40; // Weak match
+    }
+    return 0;
+  }
+  
+  // Check if all words from shorter category are found in longer
+  const shorterWords = words1.length <= words2.length ? words1 : words2;
+  const longerWords = words1.length > words2.length ? words1 : words2;
+  
+  let allWordsMatch = true;
+  let exactWordMatches = 0;
+  let partialWordMatches = 0;
+  let synonymMatches = 0;
+  
+  for (const shortWord of shorterWords) {
+    let wordMatched = false;
+    
+    for (const longWord of longerWords) {
+      if (shortWord === longWord) {
+        exactWordMatches++;
+        wordMatched = true;
+        break;
+      } else if (shortWord.includes(longWord) || longWord.includes(shortWord)) {
+        partialWordMatches++;
+        wordMatched = true;
+        break;
+      } else if (matchesSynonym(shortWord, longWord) || matchesSynonym(longWord, shortWord)) {
+        synonymMatches++;
+        wordMatched = true;
+        break;
+      }
+    }
+    
+    if (!wordMatched) {
+      allWordsMatch = false;
+    }
+  }
+  
+  // Calculate score based on word matches
+  if (allWordsMatch) {
+    // All words matched - high score
+    const baseScore = 60;
+    const exactBonus = exactWordMatches * 10;
+    const partialBonus = partialWordMatches * 5;
+    const synonymBonus = synonymMatches * 3;
+    return Math.min(100, baseScore + exactBonus + partialBonus + synonymBonus);
+  }
+  
+  // Partial word matching
+  if (hasCommonWords(words1, words2)) {
+    const wordSimilarity = calculateWordSimilarity(words1, words2);
+    return Math.max(30, Math.min(70, wordSimilarity));
+  }
+  
+  // 4. Check for synonym matches
+  for (const [key, synonyms] of Object.entries(categorySynonyms)) {
+    const cat1HasKey = cat1Norm.includes(key) || synonyms.some(syn => cat1Norm.includes(syn));
+    const cat2HasKey = cat2Norm.includes(key) || synonyms.some(syn => cat2Norm.includes(syn));
+    
+    if (cat1HasKey && cat2HasKey) {
+      return 50; // Both categories relate to same synonym group
+    }
+  }
+  
+  // 5. Very weak match - check first few characters
+  if (cat1Norm.substring(0, 4) === cat2Norm.substring(0, 4)) {
+    return 20; // Very weak match
   }
   
   return 0;
@@ -609,28 +800,19 @@ async function calculateInfluencerScore(
 ): Promise<RecommendationScore | null> {
     
     // Apply hard filters first - skip influencers that don't meet requirements
-    // Category filter - more flexible matching
+    // Category filter - use improved categoryMatch function with minimum threshold
     if (brief.category && profile.category) {
-      const briefCategory = brief.category.toLowerCase();
-      const profileCategory = profile.category.toLowerCase();
+      const matchScore = categoryMatch(brief.category, profile.category);
       
-      // Check for exact or partial match
-      const exactMatch = briefCategory === profileCategory;
-      const partialMatch = profileCategory.includes(briefCategory) || briefCategory.includes(profileCategory);
-      
-      // If no exact or partial match, check word-based matching
-      if (!exactMatch && !partialMatch) {
-        const briefWords = briefCategory.split(/\s+/);
-        const profileWords = profileCategory.split(/\s+/);
-        const hasCommonWord = briefWords.some((bw: string) => 
-          profileWords.some((pw: string) => pw.includes(bw) || bw.includes(pw))
-        );
-        
-        // Skip if completely different categories (no common words)
-        if (!hasCommonWord) {
-          return null;
-        }
+      // Only skip if match score is 0 (completely different categories)
+      // Allow any match score > 0 to pass through to scoring phase
+      // This ensures "tech" matches "Tech/Reviews", "Technology", etc.
+      if (matchScore === 0) {
+        return null; // Skip only if completely unrelated
       }
+    } else if (brief.category && !profile.category) {
+      // If brand specified category but influencer has no category, skip
+      return null;
     }
     
     // Follower range filter - hard filter
@@ -836,31 +1018,17 @@ export async function recommendInfluencersForBrowsing(
       const profile = rec.influencer.profile;
       if (!profile) return false;
       
-      // Category filter - more flexible matching
+      // Category filter - use improved categoryMatch function
       if (filters.category) {
-        const filterCategory = filters.category.toLowerCase();
-        const profileCategory = (profile.category || '').toLowerCase();
-        
-        if (!profileCategory) {
+        if (!profile.category) {
           return false; // No category = doesn't match
         }
         
-        // Check for exact or partial match
-        const exactMatch = filterCategory === profileCategory;
-        const partialMatch = profileCategory.includes(filterCategory) || filterCategory.includes(profileCategory);
+        const matchScore = categoryMatch(filters.category, profile.category);
         
-        // If no exact or partial match, check word-based matching
-        if (!exactMatch && !partialMatch) {
-          const filterWords = filterCategory.split(/\s+/);
-          const profileWords = profileCategory.split(/\s+/);
-          const hasCommonWord = filterWords.some((fw: string) => 
-            profileWords.some((pw: string) => pw.includes(fw) || fw.includes(pw))
-          );
-          
-          // Filter out if completely different categories
-          if (!hasCommonWord) {
-            return false;
-          }
+        // Only filter out if match score is 0 (completely different)
+        if (matchScore === 0) {
+          return false;
         }
       }
       

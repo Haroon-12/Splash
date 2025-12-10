@@ -177,10 +177,21 @@ export default function ProductRecommendationPage() {
   const handleStartConversation = async (influencerId: string) => {
     if (!session?.user?.id) return;
 
+    // Prevent creating conversations with CSV-only influencers (no account)
+    if (influencerId.startsWith('csv-')) {
+      toast.error("This influencer doesn't have an account. Please view their profile for contact information.");
+      router.push(`/dashboard/profile/${encodeURIComponent(influencerId)}?from=product-recommendations`);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("bearer_token");
       
-      const response = await fetch("/api/conversations", {
+      // Step 1: Create or get existing conversation
+      let conversationId: number;
+      let isNewConversation = false;
+      
+      const conversationResponse = await fetch("/api/conversations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -192,16 +203,79 @@ export default function ProductRecommendationPage() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success("Conversation started!");
-        router.push(`/dashboard/chat?conversation=${data.conversation.id}`);
-      } else if (response.status === 409) {
-        const data = await response.json();
-        router.push(`/dashboard/chat?conversation=${data.conversationId}`);
+      if (conversationResponse.ok) {
+        const data = await conversationResponse.json();
+        conversationId = data.conversation.id;
+        isNewConversation = true; // New conversation created
+      } else if (conversationResponse.status === 409) {
+        const data = await conversationResponse.json();
+        conversationId = data.conversationId;
+        isNewConversation = false; // Conversation already exists
       } else {
-        throw new Error("Failed to start conversation");
+        const errorData = await conversationResponse.json().catch(() => ({}));
+        if (errorData.code === 'SQLITE_CONSTRAINT_FOREIGNKEY' || errorData.code === 'USER_NOT_FOUND') {
+          toast.error("This influencer doesn't have an account. Please view their profile for contact information.");
+          router.push(`/dashboard/profile/${encodeURIComponent(influencerId)}?from=product-recommendations`);
+          return;
+        } else {
+          throw new Error("Failed to start conversation");
+        }
       }
+
+      // Step 2: Send automatic greeting message with product details (only for new conversations)
+      if (isNewConversation) {
+        const brandName = (session.user as any).name || "We";
+        
+        // Build product details message
+        const productDetails = [
+          `Product: ${formData.name}`,
+          formData.description ? `Description: ${formData.description}` : null,
+          formData.category ? `Category: ${formData.category}` : null,
+          formData.priceRange.min || formData.priceRange.max 
+            ? `Price Range: ${formData.priceRange.min ? `$${formData.priceRange.min}` : ''}${formData.priceRange.min && formData.priceRange.max ? ' - ' : ''}${formData.priceRange.max ? `$${formData.priceRange.max}` : ''}`
+            : null,
+          formData.features.length > 0 ? `Features: ${formData.features.join(', ')}` : null,
+          formData.useCases.length > 0 ? `Use Cases: ${formData.useCases.join(', ')}` : null,
+          formData.targetAudience.gender || formData.targetAudience.ageRange
+            ? `Target Audience: ${formData.targetAudience.gender || ''}${formData.targetAudience.gender && formData.targetAudience.ageRange ? ', ' : ''}${formData.targetAudience.ageRange || ''}`
+            : null,
+        ].filter(Boolean).join('\n');
+
+        const greetingMessage = `Hi! I'm ${brandName} and I'm interested in collaborating with you to promote our product "${formData.name}".
+
+${productDetails}
+
+We believe your content and audience align perfectly with our product. Would you be interested in discussing a collaboration opportunity? I'd love to share more details about the product and answer any questions you might have.
+
+Looking forward to hearing from you!`;
+
+        const messageResponse = await fetch("/api/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            senderId: session.user.id,
+            conversationId: conversationId,
+            content: greetingMessage,
+          }),
+        });
+
+        if (!messageResponse.ok) {
+          console.error("Failed to send automatic message, but conversation was created");
+        }
+
+        toast.success("Message sent! Redirecting to chat...");
+      } else {
+        toast.success("Redirecting to chat...");
+      }
+      
+      // Step 3: Navigate to chat page
+      setTimeout(() => {
+        router.push(`/dashboard/chat?conversation=${conversationId}`);
+      }, 500);
+
     } catch (error) {
       console.error("Error starting conversation:", error);
       toast.error("Failed to start conversation");
