@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { messages, user, conversations } from '@/db/schema';
+import { messages, user, conversations, notifications } from '@/db/schema';
 import { eq, or, and, desc } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Build query conditions
     let whereConditions;
-    
+
     if (conversationWith) {
       // Filter messages between userId and conversationWith user
       whereConditions = or(
@@ -146,12 +146,38 @@ export async function POST(request: NextRequest) {
       .returning();
 
     // Update conversation's lastMessageAt
-    await db
+    const updatedConversations = await db
       .update(conversations)
       .set({
         lastMessageAt: new Date(),
       })
-      .where(eq(conversations.id, conversationId));
+      .where(eq(conversations.id, conversationId))
+      .returning();
+
+    if (updatedConversations.length > 0) {
+      const conv = updatedConversations[0];
+      // Determine who should receive the notification
+      const recipientId = conv.participant1Id === senderId ? conv.participant2Id : conv.participant1Id;
+
+      if (recipientId) {
+        const senderName = senderExists[0].name || 'A user';
+
+        // Truncate message for notification preview
+        const previewText = trimmedContent.length > 60 ? trimmedContent.substring(0, 60) + '...' : trimmedContent;
+        const msgPreview = previewText || (attachmentUrl ? 'Sent an attachment' : 'Sent a message');
+
+        // Create standard notification
+        await db.insert(notifications).values({
+          userId: recipientId,
+          type: 'new_message',
+          title: `New Message from ${senderName}`,
+          message: msgPreview,
+          isSmartAlert: false,
+          actionUrl: `/dashboard/chat?conversation=${conversationId}`,
+          createdAt: new Date(),
+        });
+      }
+    }
 
     return NextResponse.json(newMessage[0], { status: 201 });
   } catch (error) {

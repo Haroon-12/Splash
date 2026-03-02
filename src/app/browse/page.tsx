@@ -75,13 +75,28 @@ export default function BrowsePage() {
 
   const categories = [
     "All Categories",
-    "Fashion & Lifestyle",
-    "Technology",
-    "Food & Travel",
-    "Fitness & Health",
+    "Fashion",
     "Beauty",
+    "Education",
+    "Pets",
+    "Technology",
+    "Automotive",
     "Gaming",
+    "Lifestyle",
+    "Fitness",
+    "Food",
+    "Travel",
+    "Music",
+    "Parenting",
+    "Comedy",
+    "DIY",
+    "Home Decor",
     "Business",
+    "Photography",
+    "Art",
+    "Entertainment",
+    "Sports",
+    "Other"
   ];
 
   const getPlatformIcon = (platform: string) => {

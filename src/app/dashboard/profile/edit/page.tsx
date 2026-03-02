@@ -12,12 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Save, 
-  Upload, 
-  Instagram, 
-  Youtube, 
-  Facebook, 
+import {
+  Save,
+  Upload,
+  Instagram,
+  Youtube,
+  Facebook,
   MessageSquare,
   Calendar,
   DollarSign,
@@ -68,24 +68,27 @@ interface InfluencerProfile {
 }
 
 const categories = [
-  "Fashion & Lifestyle",
-  "Travel & Adventure",
-  "Food & Cooking",
-  "Fitness & Health",
-  "Beauty & Skincare",
-  "Technology",
-  "Gaming",
-  "Music",
-  "Art & Design",
-  "Business & Finance",
+  "Fashion",
+  "Beauty",
   "Education",
+  "Pets",
+  "Technology",
+  "Automotive",
+  "Gaming",
+  "Lifestyle",
+  "Fitness",
+  "Food",
+  "Travel",
+  "Music",
+  "Parenting",
+  "Comedy",
+  "DIY",
+  "Home Decor",
+  "Business",
+  "Photography",
+  "Art",
   "Entertainment",
   "Sports",
-  "Parenting",
-  "Pet Care",
-  "Home & Garden",
-  "Automotive",
-  "Photography",
   "Other"
 ];
 
@@ -194,7 +197,7 @@ export default function ProfileEditPage() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data.profile);
-        
+
         // Populate form data
         if (data.profile) {
           setFormData({
@@ -247,7 +250,7 @@ export default function ProfileEditPage() {
         // Profile doesn't exist, create a new one
         await createProfile();
       }
-      
+
       // Fetch CSV data for this user
       await fetchCSVData(session?.user?.email, session?.user?.name);
     } catch (error) {
@@ -264,12 +267,12 @@ export default function ProfileEditPage() {
       const searchParams = new URLSearchParams();
       if (email) searchParams.set('email', email);
       if (name) searchParams.set('name', name);
-      
+
       const response = await fetch(`/api/csv-data?${searchParams.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setCsvData(data);
-        
+
         // Merge CSV data with form data, prioritizing existing profile data
         setFormData(prev => ({
           ...prev,
@@ -381,7 +384,7 @@ export default function ProfileEditPage() {
       formData.gender,
       formData.activeHours,
     ];
-    
+
     const filledFields = fields.filter(field => field && field.trim() !== "").length;
     const socialMetrics = [
       formData.instagramFollowers,
@@ -389,10 +392,10 @@ export default function ProfileEditPage() {
       formData.facebookFollowers,
       formData.tiktokFollowers,
     ].filter(field => field && field.trim() !== "").length;
-    
+
     const totalFields = fields.length + 4; // Include social metrics
     const completedFields = filledFields + socialMetrics;
-    
+
     return Math.round((completedFields / totalFields) * 100);
   };
 
@@ -400,7 +403,7 @@ export default function ProfileEditPage() {
     try {
       setSaving(true);
       const token = localStorage.getItem("bearer_token");
-      
+
       const profileData = {
         ...formData,
         profileCompleteness: calculateProfileCompleteness(),
@@ -471,7 +474,7 @@ export default function ProfileEditPage() {
               <div className="text-sm text-muted-foreground mb-1">Profile Completeness</div>
               <div className="text-2xl font-bold text-primary">{completeness}%</div>
               <div className="w-24 h-2 bg-muted rounded-full mt-1">
-                <div 
+                <div
                   className="h-2 bg-primary rounded-full transition-all duration-300"
                   style={{ width: `${completeness}%` }}
                 />
@@ -504,9 +507,9 @@ export default function ProfileEditPage() {
                   <div className="flex items-center space-x-4">
                     {formData.imageUrl && (
                       <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200">
-                        <img 
-                          src={formData.imageUrl} 
-                          alt="Profile preview" 
+                        <img
+                          src={formData.imageUrl}
+                          alt="Profile preview"
                           className="w-full h-full object-cover"
                         />
                       </div>

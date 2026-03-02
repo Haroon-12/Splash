@@ -12,14 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { 
-  matchesSearch, 
-  influencerMatchesSearch, 
-  matchesCategoryFilter, 
-  matchesFollowerRange, 
+import {
+  matchesSearch,
+  influencerMatchesSearch,
+  matchesCategoryFilter,
+  matchesFollowerRange,
   matchesPlatformFilter,
-  parseFollowerCount 
+  parseFollowerCount
 } from "@/lib/search-utils";
 
 interface DirectoryInfluencer {
@@ -54,6 +55,11 @@ export default function BrowseInfluencersPage() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [filters, setFilters] = useState({
     category: "",
     minFollowers: "",
@@ -64,12 +70,12 @@ export default function BrowseInfluencersPage() {
   // Helper function to format follower counts consistently
   const formatFollowerCount = (count: string | null) => {
     if (!count || count === '') return 'N/A';
-    
+
     // If already formatted (contains K or M), return as is
     if (count.includes('K') || count.includes('M')) {
       return count;
     }
-    
+
     // If it's a number, format it
     const number = parseInt(count.replace(/,/g, ''));
     if (isNaN(number)) return count;
@@ -88,9 +94,25 @@ export default function BrowseInfluencersPage() {
 
     if (session?.user) {
       fetchInfluencers();
+      if (session.user.userType === "brand") {
+        fetchActiveCampaigns();
+      }
     }
   }, [session, isPending, router]);
 
+  const fetchActiveCampaigns = async () => {
+    try {
+      const response = await fetch("/api/campaigns");
+      if (response.ok) {
+        const data = await response.json();
+        // Assuming data is an array of campaigns, filter for active ones belonging to this brand
+        const active = data.filter((c: any) => c.status === 'active' || c.status === 'published' || c.status === 'draft');
+        setActiveCampaigns(active);
+      }
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+    }
+  };
 
   const fetchInfluencers = async () => {
     try {
@@ -148,7 +170,7 @@ export default function BrowseInfluencersPage() {
         return;
       }
       const token = localStorage.getItem("bearer_token");
-      
+
       // Check if conversation already exists
       const existingConvResponse = await fetch(
         `/api/conversations?userId=${session.user.id}`,
@@ -201,6 +223,41 @@ export default function BrowseInfluencersPage() {
     }
   };
 
+  const handleSendInvite = async () => {
+    if (!selectedInfluencerId || !selectedCampaignId) {
+      toast.error("Please select a campaign");
+      return;
+    }
+
+    try {
+      setIsSendingInvite(true);
+      const response = await fetch("/api/collaborations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          influencerId: selectedInfluencerId,
+          campaignId: parseInt(selectedCampaignId)
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Invite sent successfully!");
+        setInviteModalOpen(false);
+        setSelectedCampaignId("");
+        setSelectedInfluencerId(null);
+      } else {
+        toast.error(data.error || "Failed to send invite");
+      }
+    } catch (error) {
+      console.error("Error sending invite:", error);
+      toast.error("An error occurred while sending the invite");
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
   if (isPending || isLoading) {
     return (
       <PlatformLayout>
@@ -224,14 +281,14 @@ export default function BrowseInfluencersPage() {
   // Calculate search relevance score for sorting - improved for better accuracy
   const calculateSearchRelevance = (influencer: any, query: string): number => {
     if (!query.trim()) return 0;
-    
+
     const queryLower = query.toLowerCase().trim();
     const queryWords = queryLower.split(/\s+/).filter(w => w.length > 0);
     let relevance = 0;
-    
+
     const nameLower = influencer.name?.toLowerCase() || '';
     const emailLower = influencer.email?.toLowerCase() || '';
-    
+
     // Exact name match - highest priority (10000 points)
     if (nameLower === queryLower) {
       relevance += 10000;
@@ -270,7 +327,7 @@ export default function BrowseInfluencersPage() {
     else if (queryWords.some(word => nameLower.includes(word))) {
       relevance += 500;
     }
-    
+
     // Exact email match - very high priority
     if (emailLower === queryLower) {
       relevance += 8000;
@@ -279,7 +336,7 @@ export default function BrowseInfluencersPage() {
     else if (emailLower.includes(queryLower)) {
       relevance += 1000;
     }
-    
+
     // Category exact match
     const categoryLower = influencer.category?.toLowerCase() || '';
     if (categoryLower === queryLower) {
@@ -289,12 +346,12 @@ export default function BrowseInfluencersPage() {
     else if (categoryLower.includes(queryLower)) {
       relevance += 400;
     }
-    
+
     // Description contains query (lower priority)
     if (influencer.description?.toLowerCase().includes(queryLower)) {
       relevance += 200;
     }
-    
+
     // Other fields (lowest priority)
     if (influencer.previousBrands?.toLowerCase().includes(queryLower)) {
       relevance += 100;
@@ -302,7 +359,7 @@ export default function BrowseInfluencersPage() {
     if (influencer.notes?.toLowerCase().includes(queryLower)) {
       relevance += 50;
     }
-    
+
     return relevance;
   };
 
@@ -326,109 +383,109 @@ export default function BrowseInfluencersPage() {
           // Email matches - continue to filter checks below
         }
       }
-    
-    // Apply filters - only if they have actual values (not empty/default)
-    {
-      // Category filter - only apply if explicitly set (not empty, not "all")
-      if (filters.category && filters.category !== "all" && filters.category.trim() !== "") {
-        const filterCategory = filters.category.toLowerCase();
-        const influencerCategory = (influencer.category || '').toLowerCase();
-        
-        if (!influencerCategory) {
-          return false; // No category = doesn't match
+
+      // Apply filters - only if they have actual values (not empty/default)
+      {
+        // Category filter - only apply if explicitly set (not empty, not "all")
+        if (filters.category && filters.category !== "all" && filters.category.trim() !== "") {
+          const filterCategory = filters.category.toLowerCase();
+          const influencerCategory = (influencer.category || '').toLowerCase();
+
+          if (!influencerCategory) {
+            return false; // No category = doesn't match
+          }
+
+          // Exact match
+          if (filterCategory === influencerCategory) {
+            // Match
+          }
+          // Partial match (one contains the other)
+          else if (influencerCategory.includes(filterCategory) || filterCategory.includes(influencerCategory)) {
+            // Match
+          }
+          // Word-based matching
+          else {
+            const filterWords = filterCategory.split(/\s+/);
+            const influencerWords = influencerCategory.split(/\s+/);
+            const hasCommonWord = filterWords.some(fw =>
+              influencerWords.some(iw => iw.includes(fw) || fw.includes(iw))
+            );
+
+            if (!hasCommonWord) {
+              return false; // No common words = doesn't match
+            }
+          }
         }
-        
-        // Exact match
-        if (filterCategory === influencerCategory) {
-          // Match
+
+        // Follower range filter - only apply if explicitly set (not empty string)
+        const minFollowersStr = filters.minFollowers?.toString().trim() || '';
+        const maxFollowersStr = filters.maxFollowers?.toString().trim() || '';
+        const minFollowersNum = minFollowersStr ? parseInt(minFollowersStr) : null;
+        const maxFollowersNum = maxFollowersStr ? parseInt(maxFollowersStr) : null;
+
+        // Only apply filter if we have valid numbers (not empty strings, not NaN)
+        if ((minFollowersNum !== null && !isNaN(minFollowersNum)) || (maxFollowersNum !== null && !isNaN(maxFollowersNum))) {
+          const totalFollowers =
+            parseFollowerCount(influencer.instagramFollowers) +
+            parseFollowerCount(influencer.youtubeFollowers) +
+            parseFollowerCount(influencer.facebookFollowers) +
+            parseFollowerCount(influencer.tiktokFollowers);
+
+          if (minFollowersNum !== null && !isNaN(minFollowersNum) && totalFollowers < minFollowersNum) {
+            return false;
+          }
+          if (maxFollowersNum !== null && !isNaN(maxFollowersNum) && totalFollowers > maxFollowersNum) {
+            return false;
+          }
         }
-        // Partial match (one contains the other)
-        else if (influencerCategory.includes(filterCategory) || filterCategory.includes(influencerCategory)) {
-          // Match
-        }
-        // Word-based matching
-        else {
-          const filterWords = filterCategory.split(/\s+/);
-          const influencerWords = influencerCategory.split(/\s+/);
-          const hasCommonWord = filterWords.some(fw => 
-            influencerWords.some(iw => iw.includes(fw) || fw.includes(iw))
-          );
-          
-          if (!hasCommonWord) {
-            return false; // No common words = doesn't match
+
+        // Platform filter - only apply if explicitly selected
+        if (filters.platforms && filters.platforms.length > 0) {
+          const hasPlatform = filters.platforms.some(platform => {
+            const platformLower = platform.toLowerCase();
+            return (
+              (platformLower === 'instagram' && influencer.socials.instagram) ||
+              (platformLower === 'youtube' && influencer.socials.youtube) ||
+              (platformLower === 'facebook' && influencer.socials.facebook) ||
+              (platformLower === 'tiktok' && influencer.socials.tiktok)
+            );
+          });
+
+          if (!hasPlatform) {
+            return false;
           }
         }
       }
-      
-      // Follower range filter - only apply if explicitly set (not empty string)
-      const minFollowersStr = filters.minFollowers?.toString().trim() || '';
-      const maxFollowersStr = filters.maxFollowers?.toString().trim() || '';
-      const minFollowersNum = minFollowersStr ? parseInt(minFollowersStr) : null;
-      const maxFollowersNum = maxFollowersStr ? parseInt(maxFollowersStr) : null;
-      
-      // Only apply filter if we have valid numbers (not empty strings, not NaN)
-      if ((minFollowersNum !== null && !isNaN(minFollowersNum)) || (maxFollowersNum !== null && !isNaN(maxFollowersNum))) {
-        const totalFollowers = 
-          parseFollowerCount(influencer.instagramFollowers) +
-          parseFollowerCount(influencer.youtubeFollowers) +
-          parseFollowerCount(influencer.facebookFollowers) +
-          parseFollowerCount(influencer.tiktokFollowers);
-        
-        if (minFollowersNum !== null && !isNaN(minFollowersNum) && totalFollowers < minFollowersNum) {
-          return false;
+
+      return true;
+    })
+    .map(influencer => ({
+      ...influencer,
+      // Calculate search relevance for sorting
+      searchRelevance: trimmedSearchQuery
+        ? calculateSearchRelevance(influencer, trimmedSearchQuery)
+        : 0,
+    }))
+    .sort((a, b) => {
+      // CRITICAL: If there's a search query, ALWAYS prioritize search relevance FIRST
+      if (trimmedSearchQuery) {
+        const aRelevance = (a as any).searchRelevance || 0;
+        const bRelevance = (b as any).searchRelevance || 0;
+        const relevanceDiff = bRelevance - aRelevance;
+
+        if (relevanceDiff !== 0) {
+          // Higher relevance comes first - this ensures exact matches are on top
+          return relevanceDiff;
         }
-        if (maxFollowersNum !== null && !isNaN(maxFollowersNum) && totalFollowers > maxFollowersNum) {
-          return false;
-        }
+
+        // Finally, sort alphabetically
+        return a.name.localeCompare(b.name);
       }
-      
-      // Platform filter - only apply if explicitly selected
-      if (filters.platforms && filters.platforms.length > 0) {
-        const hasPlatform = filters.platforms.some(platform => {
-          const platformLower = platform.toLowerCase();
-          return (
-            (platformLower === 'instagram' && influencer.socials.instagram) ||
-            (platformLower === 'youtube' && influencer.socials.youtube) ||
-            (platformLower === 'facebook' && influencer.socials.facebook) ||
-            (platformLower === 'tiktok' && influencer.socials.tiktok)
-          );
-        });
-        
-        if (!hasPlatform) {
-          return false;
-        }
-      }
-    }
-    
-    return true;
-  })
-  .map(influencer => ({
-    ...influencer,
-    // Calculate search relevance for sorting
-    searchRelevance: trimmedSearchQuery 
-      ? calculateSearchRelevance(influencer, trimmedSearchQuery)
-      : 0,
-  }))
-  .sort((a, b) => {
-    // CRITICAL: If there's a search query, ALWAYS prioritize search relevance FIRST
-    if (trimmedSearchQuery) {
-      const aRelevance = (a as any).searchRelevance || 0;
-      const bRelevance = (b as any).searchRelevance || 0;
-      const relevanceDiff = bRelevance - aRelevance;
-      
-      if (relevanceDiff !== 0) {
-        // Higher relevance comes first - this ensures exact matches are on top
-        return relevanceDiff;
-      }
-      
-      // Finally, sort alphabetically
+
+      // No search query - sort alphabetically by name
       return a.name.localeCompare(b.name);
-    }
-    
-    // No search query - sort alphabetically by name
-    return a.name.localeCompare(b.name);
-  });
-  
+    });
+
 
   return (
     <PlatformLayout>
@@ -448,17 +505,17 @@ export default function BrowseInfluencersPage() {
         {/* Search and Filters */}
         <div className="space-y-4 mb-6 lg:mb-8">
           <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
                 placeholder="Search by name, email, category, description, or previous brands..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
-          </div>
-          
+
           {isBrand && (
             <Card>
               <CardHeader>
@@ -563,9 +620,9 @@ export default function BrowseInfluencersPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 lg:h-16 lg:w-16 flex-shrink-0">
-                    <AvatarImage 
-                      src={influencer.platformImage || influencer.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${influencer.name}`} 
-                      alt={influencer.name} 
+                    <AvatarImage
+                      src={influencer.platformImage || influencer.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${influencer.name}`}
+                      alt={influencer.name}
                     />
                     <AvatarFallback>{influencer.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                   </Avatar>
@@ -700,8 +757,8 @@ export default function BrowseInfluencersPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1"
                   onClick={() => {
                     // Use csvRecordId for consistent profile viewing
@@ -712,20 +769,33 @@ export default function BrowseInfluencersPage() {
                   View Profile
                 </Button>
                 {isBrand && (
-                  <Button
-                    className="flex-1 bg-gradient-to-r from-primary to-accent"
-                    disabled={!influencer.isPlatformUser}
-                    onClick={() => handleStartConversation(influencer)}
-                  >
-                    {influencer.isPlatformUser ? (
-                      <>
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Message
-                      </>
-                    ) : (
-                      'No Account'
-                    )}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      disabled={!influencer.isPlatformUser}
+                      onClick={() => {
+                        setSelectedInfluencerId(influencer.platformUserId!);
+                        setInviteModalOpen(true);
+                      }}
+                    >
+                      Invite
+                    </Button>
+                    <Button
+                      className="flex-1 bg-gradient-to-r from-primary to-accent"
+                      disabled={!influencer.isPlatformUser}
+                      onClick={() => handleStartConversation(influencer)}
+                    >
+                      {influencer.isPlatformUser ? (
+                        <>
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Message
+                        </>
+                      ) : (
+                        'No Account'
+                      )}
+                    </Button>
+                  </>
                 )}
               </div>
 
@@ -742,12 +812,57 @@ export default function BrowseInfluencersPage() {
         {filteredInfluencers.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {searchQuery 
-                ? "No influencers found matching your search." 
+              {searchQuery
+                ? "No influencers found matching your search."
                 : "No approved influencers yet."}
             </p>
           </div>
         )}
+
+        {/* Campaign Invite Modal */}
+        <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Invite to Campaign</DialogTitle>
+              <DialogDescription>
+                Select which of your active campaigns you want to invite this influencer to join.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Select Campaign</label>
+                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a campaign..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeCampaigns.length === 0 ? (
+                      <SelectItem value="none" disabled>No active campaigns found</SelectItem>
+                    ) : (
+                      activeCampaigns.map((camp) => (
+                        <SelectItem key={camp.id} value={camp.id.toString()}>
+                          {camp.title}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendInvite}
+                disabled={!selectedCampaignId || selectedCampaignId === "none" || isSendingInvite}
+              >
+                {isSendingInvite ? "Sending..." : "Send Invite"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </PlatformLayout>
   );

@@ -20,6 +20,7 @@ interface Notification {
   actionUrl: string | null;
   metadata: string | null;
   createdAt: string;
+  isSmartAlert: boolean;
 }
 
 export function NotificationBell() {
@@ -28,10 +29,26 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'all' | 'standard' | 'smart'>('all');
 
   useEffect(() => {
     if (session?.user) {
-      fetchNotifications();
+      // Background generator for Smart Alerts
+      const generateSmartAlerts = async () => {
+        try {
+          const token = localStorage.getItem("bearer_token");
+          await fetch("/api/notifications/generate-smart-alerts", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Failed to generate smart alerts:", e);
+        }
+      };
+
+      // Generate once on load, then fetch
+      generateSmartAlerts().then(() => fetchNotifications());
+
       // Poll for new notifications every 30 seconds
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
@@ -70,7 +87,7 @@ export function NotificationBell() {
       });
 
       if (response.ok) {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(n => n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
@@ -94,7 +111,7 @@ export function NotificationBell() {
       });
 
       if (response.ok) {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
         );
         setUnreadCount(0);
@@ -131,11 +148,11 @@ export function NotificationBell() {
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    
+
     if (notification.actionUrl) {
       window.location.href = notification.actionUrl;
     }
-    
+
     setIsOpen(false);
   };
 
@@ -163,13 +180,25 @@ export function NotificationBell() {
       case 'claim_rejected':
         return 'text-red-600';
       case 'profile_update_reminder':
+      case 'profile_optimization':
         return 'text-blue-600';
       case 'new_message':
         return 'text-purple-600';
+      case 'campaign_match':
+        return 'text-orange-500';
+      case 'conversation_follow_up':
+        return 'text-amber-500';
       default:
         return 'text-gray-600';
     }
   };
+
+  const filteredNotifications = notifications.filter(n => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'smart') return n.isSmartAlert;
+    if (activeTab === 'standard') return !n.isSmartAlert;
+    return true;
+  });
 
   if (!session?.user) {
     return null;
@@ -185,8 +214,8 @@ export function NotificationBell() {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <Badge 
-            variant="destructive" 
+          <Badge
+            variant="destructive"
             className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
           >
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -205,7 +234,7 @@ export function NotificationBell() {
               onClick={() => setIsOpen(false)}
               className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
             />
-            
+
             {/* Notification Panel */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: -10 }}
@@ -241,22 +270,42 @@ export function NotificationBell() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
+                  <div className="flex px-4 py-2 gap-2 border-b border-border">
+                    <button
+                      onClick={() => setActiveTab('all')}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors ${activeTab === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('standard')}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors ${activeTab === 'standard' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                    >
+                      Notifications
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('smart')}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 ${activeTab === 'smart' ? 'bg-orange-500 text-white' : 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20'}`}
+                    >
+                      <span>🌟</span> Smart Alerts
+                    </button>
+                  </div>
+
                   <ScrollArea className="h-96">
-                    {notifications.length === 0 ? (
+                    {filteredNotifications.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No notifications yet</p>
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        {notifications.map((notification) => (
+                        {filteredNotifications.map((notification) => (
                           <motion.div
                             key={notification.id}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className={`p-3 hover:bg-muted/50 cursor-pointer border-b border-border/50 ${
-                              !notification.isRead ? 'bg-primary/5' : ''
-                            }`}
+                            className={`p-3 hover:bg-muted/50 cursor-pointer border-b border-border/50 relative ${!notification.isRead ? 'bg-primary/5' : ''
+                              } ${notification.isSmartAlert ? 'bg-orange-500/5' : ''}`}
                             onClick={() => handleNotificationClick(notification)}
                           >
                             <div className="flex items-start gap-3">

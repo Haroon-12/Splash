@@ -177,6 +177,9 @@ export const notifications = sqliteTable("notifications", {
   isRead: integer("is_read", { mode: "boolean" })
     .$defaultFn(() => false)
     .notNull(),
+  isSmartAlert: integer("is_smart_alert", { mode: "boolean" })
+    .default(false)
+    .notNull(),
   readAt: integer("read_at", { mode: "timestamp" }),
   actionUrl: text("action_url"), // URL to navigate when notification is clicked
   metadata: text("metadata"), // JSON string for additional data

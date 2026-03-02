@@ -15,22 +15,28 @@ import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 
 const categories = [
-  "Fashion & Lifestyle",
-  "Travel & Adventure",
-  "Food & Cooking",
-  "Technology",
-  "Fitness & Health",
-  "Beauty & Skincare",
-  "Gaming",
+  "Fashion",
+  "Beauty",
   "Education",
-  "Business & Finance",
+  "Pets",
+  "Technology",
+  "Automotive",
+  "Gaming",
+  "Lifestyle",
+  "Fitness",
+  "Food",
+  "Travel",
+  "Music",
+  "Parenting",
+  "Comedy",
+  "DIY",
+  "Home Decor",
+  "Business",
+  "Photography",
+  "Art",
   "Entertainment",
   "Sports",
-  "Music",
-  "Art & Design",
-  "Home & Decor",
-  "Pet Care",
-  "Other",
+  "Other"
 ];
 
 const platforms = ["Instagram", "YouTube", "TikTok", "Facebook"];
@@ -39,7 +45,7 @@ export default function CreateCampaignPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -89,7 +95,7 @@ export default function CreateCampaignPage() {
 
     try {
       const token = localStorage.getItem("bearer_token");
-      
+
       const response = await fetch("/api/campaigns", {
         method: "POST",
         headers: {
@@ -100,9 +106,9 @@ export default function CreateCampaignPage() {
           ...formData,
           budgetRange: formData.budgetRange.min || formData.budgetRange.max
             ? {
-                min: formData.budgetRange.min ? parseFloat(formData.budgetRange.min) : undefined,
-                max: formData.budgetRange.max ? parseFloat(formData.budgetRange.max) : undefined,
-              }
+              min: formData.budgetRange.min ? parseFloat(formData.budgetRange.min) : undefined,
+              max: formData.budgetRange.max ? parseFloat(formData.budgetRange.max) : undefined,
+            }
             : undefined,
           minFollowers: formData.minFollowers ? parseInt(formData.minFollowers) : undefined,
           maxFollowers: formData.maxFollowers ? parseInt(formData.maxFollowers) : undefined,

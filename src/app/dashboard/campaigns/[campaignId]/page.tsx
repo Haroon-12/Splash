@@ -42,6 +42,7 @@ interface Recommendation {
     budgetAlignment: number;
   };
   influencer: any;
+  collaborationStatus?: string | null;
 }
 
 export default function CampaignDetailPage() {
@@ -49,11 +50,12 @@ export default function CampaignDetailPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const campaignId = params.campaignId as string;
-  
+
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [isSendingInvite, setIsSendingInvite] = useState<string | null>(null);
 
   useEffect(() => {
     if (campaignId) {
@@ -120,11 +122,11 @@ export default function CampaignDetailPage() {
 
     try {
       const token = localStorage.getItem("bearer_token");
-      
+
       // Step 1: Create or get existing conversation
       let conversationId: number;
       let isNewConversation = false;
-      
+
       const conversationResponse = await fetch("/api/conversations", {
         method: "POST",
         headers: {
@@ -195,7 +197,7 @@ Looking forward to hearing from you!`;
       } else {
         toast.success("Redirecting to chat...");
       }
-      
+
       // Step 3: Navigate to chat page
       setTimeout(() => {
         router.push(`/dashboard/chat?conversation=${conversationId}`);
@@ -204,6 +206,45 @@ Looking forward to hearing from you!`;
     } catch (error) {
       console.error("Error starting conversation:", error);
       toast.error("Failed to start conversation");
+    }
+  };
+
+  const handleSendInvite = async (influencerId: string) => {
+    if (!campaign) return;
+
+    try {
+      setIsSendingInvite(influencerId);
+      const token = localStorage.getItem("bearer_token");
+      const response = await fetch("/api/collaborations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          influencerId,
+          campaignId: campaign.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Invite sent successfully!");
+        // Update local state to reflect pending status
+        setRecommendations(prev => prev.map(rec =>
+          rec.influencerId === influencerId
+            ? { ...rec, collaborationStatus: 'pending' }
+            : rec
+        ));
+      } else {
+        toast.error(data.error || "Failed to send invite");
+      }
+    } catch (error) {
+      console.error("Error sending invite:", error);
+      toast.error("An error occurred while sending the invite");
+    } finally {
+      setIsSendingInvite(null);
     }
   };
 
@@ -245,7 +286,7 @@ Looking forward to hearing from you!`;
 
       // Step 1: Create or get existing conversation
       let conversationId: number;
-      
+
       const conversationResponse = await fetch("/api/conversations", {
         method: "POST",
         headers: {
@@ -290,7 +331,7 @@ Looking forward to hearing from you!`;
       }
 
       toast.success("Message sent! Redirecting to chat...");
-      
+
       // Step 3: Navigate to chat page
       setTimeout(() => {
         router.push(`/dashboard/chat?conversation=${conversationId}`);
@@ -444,18 +485,49 @@ Looking forward to hearing from you!`;
 
                       {/* Check if influencer has account */}
                       {(() => {
-                        const hasAccount = rec.influencer.profile?.dataSource !== 'csv' && 
-                                         rec.influencer.profile?.isPlatformUser !== false &&
-                                         !rec.influencerId.startsWith('csv-');
-                        
+                        const hasAccount = rec.influencer.profile?.dataSource !== 'csv' &&
+                          rec.influencer.profile?.isPlatformUser !== false &&
+                          !rec.influencerId.startsWith('csv-');
+
                         return hasAccount ? (
-                          <Button
-                            className="w-full"
-                            onClick={() => handleStartConversation(rec.influencerId)}
-                          >
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Contact
-                          </Button>
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => {
+                                  router.push(`/dashboard/profile/${rec.influencerId}?from=campaign-${campaignId}`);
+                                }}
+                              >
+                                View Profile
+                              </Button>
+                              {(rec.collaborationStatus === 'pending' || rec.collaborationStatus === 'active') ? (
+                                <Button
+                                  variant="outline"
+                                  className="flex-1"
+                                  disabled
+                                >
+                                  {rec.collaborationStatus === 'pending' ? 'Invite Pending' : 'Active in Campaign'}
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  className="flex-1"
+                                  disabled={isSendingInvite === rec.influencerId}
+                                  onClick={() => handleSendInvite(rec.influencerId)}
+                                >
+                                  {isSendingInvite === rec.influencerId ? "..." : "Invite"}
+                                </Button>
+                              )}
+                            </div>
+                            <Button
+                              className="w-full"
+                              onClick={() => handleStartConversation(rec.influencerId)}
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              Contact
+                            </Button>
+                          </div>
                         ) : (
                           <div className="space-y-2">
                             <Button

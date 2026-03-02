@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
@@ -18,22 +20,28 @@ import { useSession } from "@/lib/auth-client";
 import { motion } from "framer-motion";
 
 const categories = [
-  "Fashion & Lifestyle",
-  "Travel & Adventure",
-  "Food & Cooking",
-  "Technology",
-  "Fitness & Health",
-  "Beauty & Skincare",
-  "Gaming",
+  "Fashion",
+  "Beauty",
   "Education",
-  "Business & Finance",
+  "Pets",
+  "Technology",
+  "Automotive",
+  "Gaming",
+  "Lifestyle",
+  "Fitness",
+  "Food",
+  "Travel",
+  "Music",
+  "Parenting",
+  "Comedy",
+  "DIY",
+  "Home Decor",
+  "Business",
+  "Photography",
+  "Art",
   "Entertainment",
   "Sports",
-  "Music",
-  "Art & Design",
-  "Home & Decor",
-  "Pet Care",
-  "Other",
+  "Other"
 ];
 
 interface Recommendation {
@@ -56,19 +64,24 @@ interface Recommendation {
 }
 
 export default function ProductRecommendationPage() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
-  
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+
   // Restore recommendations state when returning from profile page
   useEffect(() => {
     const savedRecommendations = sessionStorage.getItem('productRecommendations');
     const savedFormData = sessionStorage.getItem('productFormData');
     const shouldShowRecommendations = searchParams.get('showRecommendations') === 'true';
-    
+
     if (shouldShowRecommendations && savedRecommendations) {
       try {
         const parsedRecommendations = JSON.parse(savedRecommendations);
@@ -78,7 +91,7 @@ export default function ProductRecommendationPage() {
         console.error('Error restoring recommendations:', e);
       }
     }
-    
+
     if (savedFormData) {
       try {
         const parsedFormData = JSON.parse(savedFormData);
@@ -88,7 +101,7 @@ export default function ProductRecommendationPage() {
       }
     }
   }, [searchParams]);
-  
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -120,7 +133,7 @@ export default function ProductRecommendationPage() {
     try {
       // First create the product
       const token = localStorage.getItem("bearer_token");
-      
+
       const productResponse = await fetch("/api/products", {
         method: "POST",
         headers: {
@@ -131,9 +144,9 @@ export default function ProductRecommendationPage() {
           ...formData,
           priceRange: formData.priceRange.min || formData.priceRange.max
             ? {
-                min: formData.priceRange.min ? parseFloat(formData.priceRange.min) : undefined,
-                max: formData.priceRange.max ? parseFloat(formData.priceRange.max) : undefined,
-              }
+              min: formData.priceRange.min ? parseFloat(formData.priceRange.min) : undefined,
+              max: formData.priceRange.max ? parseFloat(formData.priceRange.max) : undefined,
+            }
             : undefined,
         }),
       });
@@ -157,11 +170,11 @@ export default function ProductRecommendationPage() {
         const recs = recData.recommendations || [];
         setRecommendations(recs);
         setShowRecommendations(true);
-        
+
         // Save recommendations and form data to sessionStorage for navigation persistence
         sessionStorage.setItem('productRecommendations', JSON.stringify(recs));
         sessionStorage.setItem('productFormData', JSON.stringify(formData));
-        
+
         toast.success("Recommendations generated successfully!");
       } else {
         throw new Error(recData.error || "Failed to get recommendations");
@@ -173,6 +186,25 @@ export default function ProductRecommendationPage() {
       setIsLoading(false);
     }
   };
+
+  const fetchActiveCampaigns = async () => {
+    try {
+      const response = await fetch("/api/campaigns");
+      if (response.ok) {
+        const data = await response.json();
+        const active = data.filter((c: any) => c.status === 'active' || c.status === 'published' || c.status === 'draft');
+        setActiveCampaigns(active);
+      }
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+    }
+  };
+
+  useEffect(() => {
+    if ((session?.user as any)?.userType === 'brand') {
+      fetchActiveCampaigns();
+    }
+  }, [session]);
 
   const handleStartConversation = async (influencerId: string) => {
     if (!session?.user?.id) return;
@@ -186,11 +218,11 @@ export default function ProductRecommendationPage() {
 
     try {
       const token = localStorage.getItem("bearer_token");
-      
+
       // Step 1: Create or get existing conversation
       let conversationId: number;
       let isNewConversation = false;
-      
+
       const conversationResponse = await fetch("/api/conversations", {
         method: "POST",
         headers: {
@@ -225,13 +257,13 @@ export default function ProductRecommendationPage() {
       // Step 2: Send automatic greeting message with product details (only for new conversations)
       if (isNewConversation) {
         const brandName = (session.user as any).name || "We";
-        
+
         // Build product details message
         const productDetails = [
           `Product: ${formData.name}`,
           formData.description ? `Description: ${formData.description}` : null,
           formData.category ? `Category: ${formData.category}` : null,
-          formData.priceRange.min || formData.priceRange.max 
+          formData.priceRange.min || formData.priceRange.max
             ? `Price Range: ${formData.priceRange.min ? `$${formData.priceRange.min}` : ''}${formData.priceRange.min && formData.priceRange.max ? ' - ' : ''}${formData.priceRange.max ? `$${formData.priceRange.max}` : ''}`
             : null,
           formData.features.length > 0 ? `Features: ${formData.features.join(', ')}` : null,
@@ -270,7 +302,7 @@ Looking forward to hearing from you!`;
       } else {
         toast.success("Redirecting to chat...");
       }
-      
+
       // Step 3: Navigate to chat page
       setTimeout(() => {
         router.push(`/dashboard/chat?conversation=${conversationId}`);
@@ -279,6 +311,45 @@ Looking forward to hearing from you!`;
     } catch (error) {
       console.error("Error starting conversation:", error);
       toast.error("Failed to start conversation");
+    }
+  };
+
+  const handleSendInvite = async () => {
+    if (!selectedInfluencerId || !selectedCampaignId) {
+      toast.error("Please select a campaign");
+      return;
+    }
+
+    try {
+      setIsSendingInvite(true);
+      const token = localStorage.getItem("bearer_token");
+      const response = await fetch("/api/collaborations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          influencerId: selectedInfluencerId,
+          campaignId: parseInt(selectedCampaignId)
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Invite sent successfully!");
+        setInviteModalOpen(false);
+        setSelectedCampaignId("");
+        setSelectedInfluencerId(null);
+      } else {
+        toast.error(data.error || "Failed to send invite");
+      }
+    } catch (error) {
+      console.error("Error sending invite:", error);
+      toast.error("An error occurred while sending the invite");
+    } finally {
+      setIsSendingInvite(false);
     }
   };
 
@@ -493,22 +564,33 @@ Looking forward to hearing from you!`;
 
                         {/* Check if influencer has account */}
                         {(() => {
-                          const hasAccount = rec.influencer.profile?.dataSource !== 'csv' && 
-                                           rec.influencer.profile?.isPlatformUser !== false &&
-                                           !rec.influencerId.startsWith('csv-');
-                          
+                          const hasAccount = rec.influencer.profile?.dataSource !== 'csv' &&
+                            rec.influencer.profile?.isPlatformUser !== false &&
+                            !rec.influencerId.startsWith('csv-');
+
                           return hasAccount ? (
                             <div className="space-y-2">
-                              <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => {
-                                  // Pass query parameter to indicate we came from product recommendations
-                                  router.push(`/dashboard/profile/${rec.influencerId}?from=product-recommendations`);
-                                }}
-                              >
-                                View Profile
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={() => {
+                                    router.push(`/dashboard/profile/${rec.influencerId}?from=product-recommendations`);
+                                  }}
+                                >
+                                  View Profile
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={() => {
+                                    setSelectedInfluencerId(rec.influencerId);
+                                    setInviteModalOpen(true);
+                                  }}
+                                >
+                                  Invite
+                                </Button>
+                              </div>
                               <Button
                                 className="w-full"
                                 onClick={() => handleStartConversation(rec.influencerId)}
@@ -564,6 +646,50 @@ Looking forward to hearing from you!`;
             </Button>
           </div>
         )}
+
+        <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Invite to Campaign</DialogTitle>
+              <DialogDescription>
+                Select which of your active campaigns you want to invite this AI recommended influencer to join.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Select Campaign</label>
+                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a campaign..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeCampaigns.length === 0 ? (
+                      <SelectItem value="none" disabled>No active campaigns found</SelectItem>
+                    ) : (
+                      activeCampaigns.map((camp) => (
+                        <SelectItem key={camp.id} value={camp.id.toString()}>
+                          {camp.title}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendInvite}
+                disabled={!selectedCampaignId || selectedCampaignId === "none" || isSendingInvite}
+              >
+                {isSendingInvite ? "Sending..." : "Send Invite"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </PlatformLayout>
   );

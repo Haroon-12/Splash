@@ -43,25 +43,25 @@ export function getCSVData(): CSVInfluencer[] {
   try {
     const csvPath = path.join(process.cwd(), 'influencers.csv');
     const csvContent = fs.readFileSync(csvPath, 'utf-8');
-    const lines = csvContent.split('\n').filter(line => line.trim() !== '');
-    
+    const lines = csvContent.split('\n').filter(line => line.trim() !== '' && !line.trim().startsWith('#'));
+
     if (lines.length < 2) {
       return [];
     }
-    
+
     const headers = lines[0].split(',').map(h => h.trim());
     const records: CSVInfluencer[] = [];
-    
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       const values: string[] = [];
       let current = '';
       let inQuotes = false;
-      
+
       // Handle CSV parsing with quoted fields
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
-        
+
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
@@ -72,14 +72,14 @@ export function getCSVData(): CSVInfluencer[] {
         }
       }
       values.push(current.trim()); // Add the last value
-      
+
       const record: any = {};
       headers.forEach((header, index) => {
         record[header] = (values[index] || '').trim();
       });
       records.push(record as CSVInfluencer);
     }
-    
+
     return records;
   } catch (error) {
     console.error('Error reading CSV file:', error);

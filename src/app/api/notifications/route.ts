@@ -14,32 +14,36 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get('unreadOnly') === 'true';
+    const smartAlertsOnly = url.searchParams.get('smartAlerts') === 'true';
+    const normalOnly = url.searchParams.get('normalOnly') === 'true';
     const limit = parseInt(url.searchParams.get('limit') || '50');
 
-    let query = db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.userId, currentUser.id))
-      .orderBy(desc(notifications.createdAt))
-      .limit(limit);
+    // Build conditions
+    const conditions = [eq(notifications.userId, currentUser.id)];
 
     if (unreadOnly) {
-      query = query.where(
-        and(
-          eq(notifications.userId, currentUser.id),
-          eq(notifications.isRead, false)
-        )
-      );
+      conditions.push(eq(notifications.isRead, false));
     }
 
-    const userNotifications = await query;
+    if (smartAlertsOnly) {
+      conditions.push(eq(notifications.isSmartAlert, true));
+    } else if (normalOnly) {
+      conditions.push(eq(notifications.isSmartAlert, false));
+    }
+
+    const userNotifications = await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
 
     return NextResponse.json({ notifications: userNotifications });
 
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch notifications' 
+    return NextResponse.json({
+      error: 'Failed to fetch notifications'
     }, { status: 500 });
   }
 }
@@ -96,15 +100,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      notification: updatedNotification[0] 
+    return NextResponse.json({
+      success: true,
+      notification: updatedNotification[0]
     });
 
   } catch (error) {
     console.error('Error updating notification:', error);
-    return NextResponse.json({ 
-      error: 'Failed to update notification' 
+    return NextResponse.json({
+      error: 'Failed to update notification'
     }, { status: 500 });
   }
 }
@@ -143,8 +147,8 @@ export async function DELETE(request: NextRequest) {
 
   } catch (error) {
     console.error('Error deleting notification:', error);
-    return NextResponse.json({ 
-      error: 'Failed to delete notification' 
+    return NextResponse.json({
+      error: 'Failed to delete notification'
     }, { status: 500 });
   }
 }

@@ -41,29 +41,29 @@ function getCSVData(): CSVInfluencer[] {
   try {
     const csvPath = path.join(process.cwd(), 'influencers.csv');
     const csvContent = fs.readFileSync(csvPath, 'utf-8');
-    
+
     // Simple CSV parsing - handle the specific format of this CSV
-    const lines = csvContent.split('\n').filter(line => line.trim() !== '');
-    
+    const lines = csvContent.split('\n').filter(line => line.trim() !== '' && !line.trim().startsWith('#'));
+
     if (lines.length < 2) {
       return [];
     }
-    
+
     const headers = lines[0].split(',').map(h => h.trim());
     const records = [];
-    
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // For this specific CSV format, we know the structure
       // Name is first field, might contain commas in parentheses
       const values = [];
       let current = '';
       let parenCount = 0;
-      
+
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
-        
+
         if (char === '(') {
           parenCount++;
         } else if (char === ')') {
@@ -73,18 +73,18 @@ function getCSVData(): CSVInfluencer[] {
           current = '';
           continue;
         }
-        
+
         current += char;
       }
       values.push(current.trim()); // Add the last value
-      
+
       const record = {};
       headers.forEach((header, index) => {
         record[header] = values[index] || '';
       });
       records.push(record);
     }
-    
+
     return records as CSVInfluencer[];
   } catch (error) {
     console.error('Error reading CSV file:', error);
@@ -107,22 +107,22 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const { email, name } = await request.json();
-    
+
     if (!email && !name) {
       return NextResponse.json({ error: 'Email or name is required' }, { status: 400 });
     }
-    
+
     // First check if account already exists (only if email is provided)
     if (email) {
       try {
         const existingUser = await db.query.user.findFirst({
           where: eq(user.email, email),
         });
-        
+
         if (existingUser) {
-          return NextResponse.json({ 
+          return NextResponse.json({
             error: 'An account with this email already exists. Please login instead.',
-            existingAccount: true 
+            existingAccount: true
           }, { status: 400 });
         }
       } catch (dbError) {
@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
         // Continue with CSV matching even if DB check fails
       }
     }
-    
+
     const csvData = getCSVData();
-    
+
     // Find matching records using the same search logic as browse page
     // Priority: name first, then email (same as browse page)
     const matches = csvData.filter(record => {
@@ -141,18 +141,18 @@ export async function POST(request: NextRequest) {
       if (nameMatch) {
         return true; // Name matches - include this record
       }
-      
+
       // PRIORITY 2: If name doesn't match, check email
-      const emailMatch = email && record.Email && record.Email.trim() !== '' && 
+      const emailMatch = email && record.Email && record.Email.trim() !== '' &&
         matchesSearch(record.Email, email);
       if (emailMatch) {
         return true; // Email matches - include this record
       }
-      
+
       // Neither name nor email matches - exclude this record
       return false;
     });
-    
+
     return NextResponse.json({
       hasMatch: matches.length > 0,
       matches: matches.map(match => ({
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         tiktokViews: match.TikTok_Views,
       }))
     });
-    
+
   } catch (error) {
     console.error('Error checking CSV match:', error);
     return NextResponse.json({ error: 'Failed to check CSV match' }, { status: 500 });

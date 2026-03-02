@@ -20,6 +20,7 @@ import {
   FileText,
   Edit3,
   UserPlus,
+  Handshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient, useSession } from "@/lib/auth-client";
@@ -46,12 +47,12 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
       icon: Shield,
       show: isAdmin,
     },
-            {
-              name: "Create Accounts",
-              href: "/admin/create-accounts",
-              icon: UserPlus,
-              show: isAdmin,
-            },
+    {
+      name: "Create Accounts",
+      href: "/admin/create-accounts",
+      icon: UserPlus,
+      show: isAdmin,
+    },
     { name: "Home", href: "/dashboard", icon: Home, show: true },
     {
       name: "Browse Influencers",
@@ -76,6 +77,12 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
       href: "/dashboard/ad-generation",
       icon: Sparkles,
       show: userType === "brand" || isAdmin,
+    },
+    {
+      name: "Collaborations",
+      href: "/dashboard/collaborations",
+      icon: Handshake,
+      show: userType === "brand" || userType === "influencer",
     },
     { name: "Messages", href: "/dashboard/chat", icon: MessageSquare, show: true },
     {
@@ -148,11 +155,10 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
-                    isActive
+                  className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   <span className="font-medium text-sm">{item.name}</span>
