@@ -9,6 +9,23 @@ import { db } from '@/db';
 import { influencerProfiles, campaigns, products, collaborations, user } from '@/db/schema';
 import { eq, and, or, sql, gte, lte } from 'drizzle-orm';
 import { getCSVData, csvToProfile } from './csv-loader';
+import { generateEmbedding, cosineSimilarity } from './embeddings';
+
+// In-memory cache for category embeddings to ensure rapid processing during array maps
+const categoryEmbeddingCache = new Map<string, number[]>();
+
+async function getCategoryEmbedding(category: string): Promise<number[]> {
+  const normalized = normalizeCategory(category);
+  if (!normalized) return [];
+
+  if (categoryEmbeddingCache.has(normalized)) {
+    return categoryEmbeddingCache.get(normalized)!;
+  }
+
+  const embedding = await generateEmbedding(normalized);
+  categoryEmbeddingCache.set(normalized, embedding);
+  return embedding;
+}
 
 export interface RecommendationScore {
   influencerId: string;
@@ -276,9 +293,9 @@ function calculateWordSimilarity(words1: string[], words2: string[]): number {
 }
 
 /**
- * Check if two categories match with improved fuzzy matching
+ * Check if two categories match with improved fuzzy matching and AI Semantic Search fallback
  */
-function categoryMatch(category1: string | null, category2: string | null): number {
+async function categoryMatch(category1: string | null, category2: string | null): Promise<number> {
   if (!category1 || !category2) return 0;
 
   const cat1Norm = normalizeCategory(category1);
@@ -305,53 +322,66 @@ function categoryMatch(category1: string | null, category2: string | null): numb
   const words1 = extractWords(category1);
   const words2 = extractWords(category2);
 
-  if (words1.length === 0 || words2.length === 0) {
-    return 0; // Strict: No words extracted means no match. Do not fallback to dangerous substrings.
-  }
+  if (words1.length > 0 && words2.length > 0) {
+    const shorterWords = words1.length <= words2.length ? words1 : words2;
+    const longerWords = words1.length > words2.length ? words1 : words2;
 
-  // Check if all words from shorter category are found in longer
-  const shorterWords = words1.length <= words2.length ? words1 : words2;
-  const longerWords = words1.length > words2.length ? words1 : words2;
+    let exactWordMatches = 0;
+    let synonymMatches = 0;
 
-  let exactWordMatches = 0;
-  let synonymMatches = 0;
+    for (const shortWord of shorterWords) {
+      for (const longWord of longerWords) {
+        if (isStrictMatch(shortWord, longWord)) {
+          exactWordMatches++;
+          break;
+        } else if (matchesSynonym(shortWord, longWord) || matchesSynonym(longWord, shortWord)) {
+          synonymMatches++;
+          break;
+        }
+      }
+    }
 
-  for (const shortWord of shorterWords) {
-    for (const longWord of longerWords) {
-      if (isStrictMatch(shortWord, longWord)) {
-        exactWordMatches++;
-        break;
-      } else if (matchesSynonym(shortWord, longWord) || matchesSynonym(longWord, shortWord)) {
-        synonymMatches++;
-        break;
+    const totalMatches = exactWordMatches + synonymMatches;
+
+    if (totalMatches > 0) {
+      if (totalMatches === shorterWords.length) {
+        return 100;
+      }
+      const matchRatio = totalMatches / longerWords.length;
+      return Math.max(50, Math.round(matchRatio * 100));
+    }
+
+    // 3. Category Synonym Dictionary Group Check
+    for (const [key, synonyms] of Object.entries(categorySynonyms)) {
+      const cat1HasKey = words1.some(w => isStrictMatch(w, key)) || words1.some(w => synonyms.some(syn => isStrictMatch(w, syn)));
+      const cat2HasKey = words2.some(w => isStrictMatch(w, key)) || words2.some(w => synonyms.some(syn => isStrictMatch(w, syn)));
+
+      if (cat1HasKey && cat2HasKey) {
+        return 80;
       }
     }
   }
 
-  const totalMatches = exactWordMatches + synonymMatches;
+  // 4. AI Semantic Similarity Fallback
+  // If rigid keyword checks failed to find a match, use Xenova Transformers context embeddings
+  try {
+    const emb1 = await getCategoryEmbedding(cat1Norm);
+    const emb2 = await getCategoryEmbedding(cat2Norm);
 
-  if (totalMatches > 0) {
-    // We have at least one valid word/synonym match. 
-    // If we matched all words in the shorter category, it's a very strong match.
-    if (totalMatches === shorterWords.length) {
-      return 100;
+    if (emb1.length > 0 && emb2.length > 0) {
+      const similarity = cosineSimilarity(emb1, emb2);
+
+      // Map > 0.4 similarity to a 50-100 score. 
+      // (E.g. 0.4 implies distinct overlap on this model, 1.0 is identical)
+      if (similarity > 0.4) {
+        return Math.min(100, Math.round(((similarity - 0.4) / 0.6) * 50 + 50));
+      }
     }
-    // Partial word matching (e.g. "Tech & Gaming" vs just "Tech")
-    const matchRatio = totalMatches / longerWords.length;
-    return Math.max(50, Math.round(matchRatio * 100));
+  } catch (error) {
+    console.error("Semantic embedding array failed", error);
   }
 
-  // 3. Category Synonym Dictionary Group Check
-  for (const [key, synonyms] of Object.entries(categorySynonyms)) {
-    const cat1HasKey = words1.some(w => isStrictMatch(w, key)) || words1.some(w => synonyms.some(syn => isStrictMatch(w, syn)));
-    const cat2HasKey = words2.some(w => isStrictMatch(w, key)) || words2.some(w => synonyms.some(syn => isStrictMatch(w, syn)));
-
-    if (cat1HasKey && cat2HasKey) {
-      return 80; // Both categories fall squarely into the same synonym mapping
-    }
-  }
-
-  return 0; // Strict: Return 0 if no clear semantic overlap
+  return 0; // Return 0 if absolutely no semantic overlap
 }
 
 /**
@@ -832,7 +862,7 @@ async function calculateInfluencerScore(
   // Apply hard filters first - skip influencers that don't meet requirements
   // Category filter - use improved categoryMatch function with minimum threshold
   if (brief.category && profile.category) {
-    const matchScore = categoryMatch(brief.category, profile.category);
+    const matchScore = await categoryMatch(brief.category, profile.category);
 
     // Only skip if match score is 0 (completely different categories)
     // Allow any match score > 0 to pass through to scoring phase
@@ -890,7 +920,7 @@ async function calculateInfluencerScore(
 
   // 1. Category Match: 30% - Based on brand's category requirement
   const categoryMatchScore = brief.category
-    ? categoryMatch(brief.category, profile.category)
+    ? await categoryMatch(brief.category, profile.category)
     : 50; // Neutral (50) if brand didn't specify category - doesn't penalize
 
   // 2. Audience Alignment: 25% - Based on brand's target audience (gender, demographics)
@@ -1041,58 +1071,6 @@ export async function recommendInfluencersForBrowsing(
     false,
     limit * 2 // Get more to filter down
   );
-
-  // Apply additional filtering based on filters
-  if (filters?.category || filters?.minFollowers || filters?.maxFollowers || filters?.platforms) {
-    recommendations = recommendations.filter(rec => {
-      const profile = rec.influencer.profile;
-      if (!profile) return false;
-
-      // Category filter - use improved categoryMatch function
-      if (filters.category) {
-        if (!profile.category) {
-          return false; // No category = doesn't match
-        }
-
-        const matchScore = categoryMatch(filters.category, profile.category);
-
-        // Only filter out if match score is 0 (completely different)
-        if (matchScore === 0) {
-          return false;
-        }
-      }
-
-      // Follower range filter (already applied in main function, but double-check)
-      if (filters.minFollowers || filters.maxFollowers) {
-        const totalFollowers = getTotalFollowers(profile);
-        if (filters.minFollowers && totalFollowers < filters.minFollowers) {
-          return false;
-        }
-        if (filters.maxFollowers && totalFollowers > filters.maxFollowers) {
-          return false;
-        }
-      }
-
-      // Platform filter (already applied in main function, but double-check)
-      if (filters.platforms && filters.platforms.length > 0) {
-        const profilePlatforms: string[] = [];
-        if (profile.instagram) profilePlatforms.push('instagram');
-        if (profile.youtube) profilePlatforms.push('youtube');
-        if (profile.facebook) profilePlatforms.push('facebook');
-        if (profile.tiktok) profilePlatforms.push('tiktok');
-
-        const hasRequiredPlatform = filters.platforms.some(req =>
-          profilePlatforms.some(prof => prof.toLowerCase() === req.toLowerCase())
-        );
-
-        if (!hasRequiredPlatform) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }
 
   // CRITICAL: If search query provided, STRICTLY filter FIRST before any ranking
   if (filters?.searchQuery && filters.searchQuery.trim()) {
