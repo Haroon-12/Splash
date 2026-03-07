@@ -6,6 +6,7 @@ import {
   Wand2,
   Handshake,
   BarChart3,
+  LineChart,
   Shield,
   Zap,
 } from "lucide-react";
@@ -34,10 +35,10 @@ const features = [
     color: "from-orange-500 to-red-500",
   },
   {
-    icon: BarChart3,
-    title: "Real-Time Analytics",
+    icon: LineChart, // Changed from BarChart3
+    title: "Interactive Analytics", // Changed from "Real-Time Analytics"
     description:
-      "Track campaign performance with detailed insights. Monitor ROI, engagement, reach, and conversion metrics.",
+      "Track campaign performance with detailed insights. Monitor clicks, engagement, reach, and interaction metrics.", // Changed description
     color: "from-green-500 to-emerald-500",
   },
   {

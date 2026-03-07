@@ -313,3 +313,33 @@ export const collaborations = sqliteTable("collaborations", {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+// Analytics Dashboard: Tracking Affiliate Links
+export const affiliateLinks = sqliteTable("affiliate_links", {
+  id: text("id").primaryKey(), // Used as the shortcode URL (e.g., sp.sh/x8jK)
+  brandId: text("brand_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  influencerId: text("influencer_id").references(() => user.id, { onDelete: "set null" }), // Optional: tied to a specific influencer
+  campaignId: integer("campaign_id").references(() => campaigns.id, { onDelete: "set null" }), // Optional: tied to a specific campaign
+  destinationUrl: text("destination_url").notNull(), // The actual website to redirect to
+  title: text("title"), // Internal name for the link (e.g. "Summer Sale Link")
+  isActive: integer("is_active", { mode: "boolean" })
+    .$defaultFn(() => true)
+    .notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Analytics Dashboard: Click Interactions
+export const clickEvents = sqliteTable("click_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  linkId: text("link_id").notNull().references(() => affiliateLinks.id, { onDelete: "cascade" }),
+  ipAddress: text("ip_address"), // Hashed or masked IP for unique visitor counting
+  userAgent: text("user_agent"), // Raw user agent string
+  deviceType: text("device_type"), // Parsed: 'mobile', 'desktop', 'tablet'
+  referrer: text("referrer"), // Which site they came from (Instagram, YouTube, etc.)
+  country: text("country"), // Geo-location if possible
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});

@@ -48,13 +48,13 @@ interface Conversation {
 }
 
 // Component to handle encrypted attachment display
-function AttachmentDisplay({ 
-  message, 
-  selectedConversation, 
+function AttachmentDisplay({
+  message,
+  selectedConversation,
   session,
-  isSent 
-}: { 
-  message: Message; 
+  isSent
+}: {
+  message: Message;
   selectedConversation: Conversation | null;
   session: any;
   isSent: boolean;
@@ -78,7 +78,7 @@ function AttachmentDisplay({
       // Check if URL ends with .enc extension (encrypted file)
       const isEncrypted = message.attachmentUrl.endsWith('.enc');
       setIsEncryptedFile(isEncrypted);
-      
+
       // If not encrypted, use the URL directly
       if (!isEncrypted) {
         setDecryptedUrl(message.attachmentUrl);
@@ -89,21 +89,21 @@ function AttachmentDisplay({
   // Decrypt file on demand
   const handleDecryptFile = async () => {
     if (decryptedUrl || !selectedConversation || !session?.user?.id) return;
-    
+
     try {
       setIsDecrypting(true);
       const participant1Id = selectedConversation.participant1Id;
       const participant2Id = selectedConversation.participant2Id;
-      
+
       // Fetch file
       const response = await fetch(message.attachmentUrl!);
       if (!response.ok) {
         throw new Error('Failed to fetch file');
       }
-      
+
       const fileBlob = await response.blob();
       const fileArrayBuffer = await fileBlob.arrayBuffer();
-      
+
       // Check if file is encrypted by trying to detect encryption format
       // Encrypted files should be base64-decodable and have minimum length
       try {
@@ -116,7 +116,7 @@ function AttachmentDisplay({
           binaryString += String.fromCharCode.apply(null, Array.from(chunk));
         }
         const base64 = btoa(binaryString);
-        
+
         // Try to decrypt (will fail if not encrypted)
         const decryptedArrayBuffer = await decryptBinary(
           base64,
@@ -124,7 +124,7 @@ function AttachmentDisplay({
           participant1Id,
           participant2Id
         );
-        
+
         // Determine MIME type
         let mimeType = 'application/octet-stream';
         if (message.attachmentType === 'image') {
@@ -132,7 +132,7 @@ function AttachmentDisplay({
         } else if (message.attachmentType === 'voice') {
           mimeType = 'audio/webm';
         }
-        
+
         // Create blob URL for decrypted file
         const decryptedBlob = new Blob([decryptedArrayBuffer], { type: mimeType });
         const url = URL.createObjectURL(decryptedBlob);
@@ -178,11 +178,10 @@ function AttachmentDisplay({
               <a
                 href={decryptedUrl}
                 download={message.attachmentName || 'image'}
-                className={`text-xs underline flex items-center gap-1 ${
-                  isSent
+                className={`text-xs underline flex items-center gap-1 ${isSent
                     ? "text-primary-foreground/70 hover:text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <Paperclip className="w-3 h-3" />
                 Download Image
@@ -194,6 +193,7 @@ function AttachmentDisplay({
               disabled={isDecrypting}
               variant="outline"
               size="sm"
+              className="text-slate-900 dark:text-slate-100"
             >
               {isDecrypting ? 'Loading...' : (isEncryptedFile === false ? 'View Image' : 'Decrypt & View Image')}
             </Button>
@@ -213,11 +213,10 @@ function AttachmentDisplay({
               <a
                 href={decryptedUrl}
                 download={message.attachmentName || 'voice-note.webm'}
-                className={`text-xs underline flex items-center gap-1 ${
-                  isSent
+                className={`text-xs underline flex items-center gap-1 ${isSent
                     ? "text-primary-foreground/70 hover:text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <Paperclip className="w-3 h-3" />
                 Download Voice Note
@@ -229,6 +228,7 @@ function AttachmentDisplay({
               disabled={isDecrypting}
               variant="outline"
               size="sm"
+              className="text-slate-900 dark:text-slate-100"
             >
               {isDecrypting ? 'Loading...' : (isEncryptedFile === false ? 'Play Voice Note' : 'Decrypt & Play Voice Note')}
             </Button>
@@ -237,22 +237,20 @@ function AttachmentDisplay({
       )}
       {message.attachmentType === 'document' && (
         <div className="space-y-2">
-          <div className={`flex items-center gap-2 p-2 rounded ${
-            isSent
+          <div className={`flex items-center gap-2 p-2 rounded ${isSent
               ? "bg-primary/20"
               : "bg-background"
-          }`}>
+            }`}>
             <Paperclip className="w-4 h-4" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">
                 {message.attachmentName || 'Document'}
               </p>
               {message.attachmentSize && (
-                <p className={`text-xs ${
-                  isSent
+                <p className={`text-xs ${isSent
                     ? "text-primary-foreground/70"
                     : "text-muted-foreground"
-                }`}>
+                  }`}>
                   {(message.attachmentSize / 1024).toFixed(1)} KB
                 </p>
               )}
@@ -264,22 +262,20 @@ function AttachmentDisplay({
                 href={decryptedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`text-xs px-3 py-1 rounded ${
-                  isSent
+                className={`text-xs px-3 py-1 rounded ${isSent
                     ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
                     : "bg-primary/10 text-primary hover:bg-primary/20"
-                } transition-colors`}
+                  } transition-colors`}
               >
                 Open
               </a>
               <a
                 href={decryptedUrl}
                 download={message.attachmentName || 'document'}
-                className={`text-xs px-3 py-1 rounded ${
-                  isSent
+                className={`text-xs px-3 py-1 rounded ${isSent
                     ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
                     : "bg-primary/10 text-primary hover:bg-primary/20"
-                } transition-colors`}
+                  } transition-colors`}
               >
                 Download
               </a>
@@ -290,6 +286,7 @@ function AttachmentDisplay({
               disabled={isDecrypting}
               variant="outline"
               size="sm"
+              className="text-slate-900 dark:text-slate-100"
             >
               {isDecrypting ? 'Loading...' : (isEncryptedFile === false ? 'Download Document' : 'Decrypt & Download Document')}
             </Button>
@@ -347,7 +344,7 @@ export default function ChatPage() {
     if (selectedConversation) {
       // Mark messages as read when opening chat
       fetchMessages(selectedConversation.id, true);
-      
+
       const interval = setInterval(() => {
         // When chat is open, mark new messages as read automatically
         fetchMessages(selectedConversation.id, true);
@@ -395,7 +392,7 @@ export default function ChatPage() {
       }
 
       const data = await response.json();
-      
+
       // Decrypt messages if conversation is selected
       if (selectedConversation && session?.user?.id) {
         const decryptedMessages = await Promise.all(
@@ -403,7 +400,7 @@ export default function ChatPage() {
             try {
               const participant1Id = selectedConversation.participant1Id;
               const participant2Id = selectedConversation.participant2Id;
-              
+
               // Decrypt content if encrypted (check first to avoid unnecessary decryption attempts)
               let decryptedContent = msg.content;
               if (msg.content && isEncrypted(msg.content)) {
@@ -426,7 +423,7 @@ export default function ChatPage() {
                   decryptedContent = msg.content;
                 }
               }
-              
+
               // Decrypt attachment name if encrypted
               let decryptedAttachmentName = msg.attachmentName;
               if (msg.attachmentName && isEncrypted(msg.attachmentName)) {
@@ -443,7 +440,7 @@ export default function ChatPage() {
                   decryptedAttachmentName = msg.attachmentName;
                 }
               }
-              
+
               return {
                 ...msg,
                 content: decryptedContent,
@@ -466,7 +463,7 @@ export default function ChatPage() {
         const unreadMessages = data.filter(
           (msg: Message) => !msg.isRead && msg.senderId !== session?.user?.id
         );
-        
+
         if (unreadMessages.length > 0) {
           // Mark all unread messages as read
           await Promise.all(
@@ -479,7 +476,7 @@ export default function ChatPage() {
               })
             )
           );
-          
+
           // Refresh conversations to update unread count
           await fetchConversations();
         }
@@ -503,10 +500,10 @@ export default function ChatPage() {
 
     try {
       setIsSending(true);
-      
+
       // Read file as ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
-      
+
       // Encrypt file content (returns base64 string)
       const participant1Id = selectedConversation.participant1Id;
       const participant2Id = selectedConversation.participant2Id;
@@ -516,7 +513,7 @@ export default function ChatPage() {
         participant1Id,
         participant2Id
       );
-      
+
       // Encrypt filename
       const encryptedFileName = await encryptText(
         file.name,
@@ -524,18 +521,18 @@ export default function ChatPage() {
         participant1Id,
         participant2Id
       );
-      
+
       // Convert base64 back to binary for file upload
       const binaryString = atob(encryptedBase64);
       const encryptedBytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         encryptedBytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       // Create a new File with encrypted binary data
       const encryptedBlob = new Blob([encryptedBytes], { type: 'application/octet-stream' });
       const encryptedFile = new File([encryptedBlob], 'encrypted', { type: 'application/octet-stream' });
-      
+
       const formData = new FormData();
       formData.append('file', encryptedFile);
       formData.append('encrypted', 'true');
@@ -584,16 +581,16 @@ export default function ChatPage() {
           stream.getTracks().forEach(track => track.stop());
           return;
         }
-        
+
         const blob = new Blob(chunks, { type: 'audio/webm' });
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
-        
+
         try {
           setIsSending(true);
-          
+
           // Read file as ArrayBuffer
           const arrayBuffer = await blob.arrayBuffer();
-          
+
           // Encrypt voice note (returns base64 string)
           const participant1Id = selectedConversation.participant1Id;
           const participant2Id = selectedConversation.participant2Id;
@@ -603,7 +600,7 @@ export default function ChatPage() {
             participant1Id,
             participant2Id
           );
-          
+
           // Encrypt filename
           const encryptedFileName = await encryptText(
             'Voice Note',
@@ -611,18 +608,18 @@ export default function ChatPage() {
             participant1Id,
             participant2Id
           );
-          
+
           // Convert base64 back to binary for file upload
           const binaryString = atob(encryptedBase64);
           const encryptedBytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             encryptedBytes[i] = binaryString.charCodeAt(i);
           }
-          
+
           // Create encrypted file
           const encryptedBlob = new Blob([encryptedBytes], { type: 'application/octet-stream' });
           const encryptedFile = new File([encryptedBlob], 'encrypted', { type: 'application/octet-stream' });
-          
+
           const formData = new FormData();
           formData.append('file', encryptedFile);
           formData.append('encrypted', 'true');
@@ -681,7 +678,7 @@ export default function ChatPage() {
       const token = localStorage.getItem("bearer_token");
       const participant1Id = selectedConversation.participant1Id;
       const participant2Id = selectedConversation.participant2Id;
-      
+
       // Encrypt message content
       let encryptedContent = '';
       if (newMessage.trim()) {
@@ -692,7 +689,7 @@ export default function ChatPage() {
           participant2Id
         );
       }
-      
+
       // Encrypt attachment name if present
       let encryptedAttachmentName = null;
       if (attachment?.name) {
@@ -703,7 +700,7 @@ export default function ChatPage() {
           participant2Id
         );
       }
-      
+
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: {
@@ -745,7 +742,7 @@ export default function ChatPage() {
 
   const getOtherParticipant = (conversation: Conversation) => {
     if (!session?.user?.id) return null;
-    
+
     if (conversation.participant1Id === session.user.id) {
       return conversation.participant2;
     }
@@ -811,11 +808,10 @@ export default function ChatPage() {
                     <button
                       key={conversation.id}
                       onClick={() => handleConversationClick(conversation)}
-                      className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors text-left ${
-                        isSelected
+                      className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors text-left ${isSelected
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-accent"
-                      }`}
+                        }`}
                     >
                       <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage
@@ -828,9 +824,8 @@ export default function ChatPage() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{other.name}</p>
-                        <p className={`text-sm truncate ${
-                          isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
-                        }`}>
+                        <p className={`text-sm truncate ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
+                          }`}>
                           {other.email}
                         </p>
                       </div>
@@ -860,8 +855,8 @@ export default function ChatPage() {
                       alt={getOtherParticipant(selectedConversation)?.name || ''}
                     />
                     <AvatarFallback>
-                      {getOtherParticipant(selectedConversation)?.name 
-                        ? getOtherParticipant(selectedConversation)?.name.charAt(0).toUpperCase() 
+                      {getOtherParticipant(selectedConversation)?.name
+                        ? getOtherParticipant(selectedConversation)?.name.charAt(0).toUpperCase()
                         : 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -880,57 +875,55 @@ export default function ChatPage() {
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="p-4">
                   <div className="space-y-4 max-w-3xl mx-auto">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No messages yet. Start the conversation!
-                    </div>
-                  ) : (
-                    messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((message) => {
-                      const isSent = message.senderId === session.user.id;
+                    {messages.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No messages yet. Start the conversation!
+                      </div>
+                    ) : (
+                      messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((message) => {
+                        const isSent = message.senderId === session.user.id;
 
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isSent ? "justify-end" : "justify-start"}`}
-                        >
+                        return (
                           <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                              isSent
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
-                            }`}
+                            key={message.id}
+                            className={`flex ${isSent ? "justify-end" : "justify-start"}`}
                           >
-                            {message.attachmentUrl && (
-                              <AttachmentDisplay
-                                message={message}
-                                selectedConversation={selectedConversation}
-                                session={session}
-                                isSent={isSent}
-                              />
-                            )}
-                            {message.content && (
-                              <p className="text-sm whitespace-pre-wrap break-words">
-                                {message.content}
-                              </p>
-                            )}
-                            <p
-                              className={`text-xs mt-1 ${
-                                isSent
-                                  ? "text-primary-foreground/70"
-                                  : "text-muted-foreground"
-                              }`}
+                            <div
+                              className={`max-w-[70%] rounded-2xl px-4 py-2 ${isSent
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                                }`}
                             >
-                              {new Date(message.createdAt).toLocaleTimeString("en-US", {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })}
-                            </p>
+                              {message.attachmentUrl && (
+                                <AttachmentDisplay
+                                  message={message}
+                                  selectedConversation={selectedConversation}
+                                  session={session}
+                                  isSent={isSent}
+                                />
+                              )}
+                              {message.content && (
+                                <p className="text-sm whitespace-pre-wrap break-words">
+                                  {message.content}
+                                </p>
+                              )}
+                              <p
+                                className={`text-xs mt-1 ${isSent
+                                    ? "text-primary-foreground/70"
+                                    : "text-muted-foreground"
+                                  }`}
+                              >
+                                {new Date(message.createdAt).toLocaleTimeString("en-US", {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                })}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </ScrollArea>
@@ -1033,8 +1026,8 @@ export default function ChatPage() {
                       )}
                     </div>
                   </div>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isSending || isRecording || (!newMessage.trim() && !attachment)}
                   >
                     <Send className="h-4 w-4" />

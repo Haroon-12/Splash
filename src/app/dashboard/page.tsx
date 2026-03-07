@@ -25,13 +25,13 @@ export default function DashboardPage() {
   const { data: session, isPending } = useSession();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Debug session data
   console.log('Dashboard session:', session);
   console.log('Session user:', session?.user);
   console.log('User type:', (session?.user as any)?.userType);
   console.log('User name:', (session?.user as any)?.name);
-  
+
   const userType = (session?.user as any)?.userType;
   const userName = (session?.user as any)?.name || "User";
 
@@ -42,16 +42,16 @@ export default function DashboardPage() {
         console.log('No session user, skipping stats fetch');
         return;
       }
-      
+
       console.log('Fetching dashboard stats for user:', session.user);
-      
+
       try {
         const response = await fetch('/api/dashboard/stats', {
           credentials: 'include',
         });
-        
+
         console.log('Stats API response status:', response.status);
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('Stats API response data:', data);
@@ -66,10 +66,10 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
-    
+
     fetchStats();
   }, [session]);
-  
+
   // Show loading state
   if (isPending || loading) {
     return (
@@ -80,7 +80,7 @@ export default function DashboardPage() {
       </PlatformLayout>
     );
   }
-  
+
   // Show error if no session
   if (!session?.user) {
     return (
@@ -98,19 +98,19 @@ export default function DashboardPage() {
 
   const metrics = userType === "admin"
     ? [
-        { label: "Pending Claims", value: stats?.pendingClaims?.toString() || "0", icon: Clock, color: "text-yellow-500" },
-        { label: "Total Users", value: stats?.totalUsers?.toString() || "0", icon: Users, color: "text-blue-500" },
-        { label: "Approved Claims", value: stats?.approvedClaims?.toString() || "0", icon: CheckCircle, color: "text-green-500" },
-        { label: "Rejected Claims", value: stats?.rejectedClaims?.toString() || "0", icon: AlertTriangle, color: "text-red-500" },
-      ]
-    : userType === "brand" 
-    ? [
+      { label: "Pending Claims", value: stats?.pendingClaims?.toString() || "0", icon: Clock, color: "text-yellow-500" },
+      { label: "Total Users", value: stats?.totalUsers?.toString() || "0", icon: Users, color: "text-blue-500" },
+      { label: "Approved Claims", value: stats?.approvedClaims?.toString() || "0", icon: CheckCircle, color: "text-green-500" },
+      { label: "Rejected Claims", value: stats?.rejectedClaims?.toString() || "0", icon: AlertTriangle, color: "text-red-500" },
+    ]
+    : userType === "brand"
+      ? [
         { label: "Active Campaigns", value: stats?.activeCampaigns?.toString() || "0", icon: Sparkles, color: "text-purple-500" },
         { label: "Influencers Connected", value: stats?.influencersConnected?.toString() || "0", icon: Users, color: "text-blue-500" },
         { label: "Messages", value: stats?.messagesCount?.toString() || "0", icon: MessageSquare, color: "text-green-500" },
-        { label: "Total ROI", value: `$${stats?.totalROI || "0"}`, icon: TrendingUp, color: "text-orange-500" },
+        { label: "Tracked Clicks", value: `${stats?.totalClicks || "0"}`, icon: BarChart3, color: "text-indigo-500" },
       ]
-    : [
+      : [
         { label: "Active Campaigns", value: stats?.activeCampaigns?.toString() || "0", icon: Sparkles, color: "text-purple-500" },
         { label: "Profile Completeness", value: `${stats?.profileCompleteness || "0"}%`, icon: Edit3, color: "text-blue-500" },
         { label: "Notifications", value: stats?.notificationsCount?.toString() || "0", icon: MessageSquare, color: "text-yellow-500" },
@@ -119,37 +119,37 @@ export default function DashboardPage() {
 
   const quickActions = userType === "admin"
     ? [
-        {
-          title: "Profile Claims",
-          description: "Review and manage profile claim requests",
-          href: "/admin/claims",
-          icon: FileText,
-          gradient: "from-yellow-500 to-orange-500",
-        },
-        {
-          title: "User Management",
-          description: "Manage users and permissions",
-          href: "/admin/users",
-          icon: Users,
-          gradient: "from-blue-500 to-cyan-500",
-        },
-        {
-          title: "System Analytics",
-          description: "View platform statistics and metrics",
-          href: "/admin/analytics",
-          icon: BarChart3,
-          gradient: "from-purple-500 to-pink-500",
-        },
-        {
-          title: "Admin Settings",
-          description: "Configure platform settings",
-          href: "/admin/settings",
-          icon: Shield,
-          gradient: "from-green-500 to-emerald-500",
-        },
-      ]
+      {
+        title: "Profile Claims",
+        description: "Review and manage profile claim requests",
+        href: "/admin/claims",
+        icon: FileText,
+        gradient: "from-yellow-500 to-orange-500",
+      },
+      {
+        title: "User Management",
+        description: "Manage users and permissions",
+        href: "/admin/users",
+        icon: Users,
+        gradient: "from-blue-500 to-cyan-500",
+      },
+      {
+        title: "System Analytics",
+        description: "View platform statistics and metrics",
+        href: "/admin/analytics",
+        icon: BarChart3,
+        gradient: "from-purple-500 to-pink-500",
+      },
+      {
+        title: "Admin Settings",
+        description: "Configure platform settings",
+        href: "/admin/settings",
+        icon: Shield,
+        gradient: "from-green-500 to-emerald-500",
+      },
+    ]
     : userType === "brand"
-    ? [
+      ? [
         {
           title: "My Campaigns",
           description: "View and manage your campaigns",
@@ -186,7 +186,7 @@ export default function DashboardPage() {
           gradient: "from-indigo-500 to-purple-500",
         },
       ]
-    : [
+      : [
         {
           title: "Browse Active Campaigns",
           description: "Discover active campaigns from brands",
@@ -240,8 +240,8 @@ export default function DashboardPage() {
             {userType === "admin"
               ? "Manage the platform, review claims, and oversee operations"
               : userType === "brand"
-              ? "Manage your campaigns and discover new influencers"
-              : "Explore brand partnerships and grow your influence"}
+                ? "Manage your campaigns and discover new influencers"
+                : "Explore brand partnerships and grow your influence"}
           </p>
         </motion.div>
 
@@ -325,8 +325,8 @@ export default function DashboardPage() {
                 {userType === "admin"
                   ? "Access advanced admin tools, detailed analytics, and system management features"
                   : userType === "brand"
-                  ? "Get unlimited ad generation, advanced analytics, and priority support"
-                  : "Connect with unlimited brands and access exclusive campaigns"}
+                    ? "Get unlimited ad generation, advanced analytics, and priority support"
+                    : "Connect with unlimited brands and access exclusive campaigns"}
               </p>
             </div>
             <Link href="/billing">
@@ -366,18 +366,18 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h4 className="font-semibold mb-1 text-sm lg:text-base">
-                  {userType === "admin" 
-                    ? "Review Profile Claims" 
-                    : userType === "brand" 
-                    ? "Browse Influencers" 
-                    : "Browse Brands"}
+                  {userType === "admin"
+                    ? "Review Profile Claims"
+                    : userType === "brand"
+                      ? "Browse Influencers"
+                      : "Browse Brands"}
                 </h4>
                 <p className="text-muted-foreground text-xs lg:text-sm">
                   {userType === "admin"
                     ? "Review and approve influencer profile claim requests"
                     : userType === "brand"
-                    ? "Find the perfect influencers for your campaigns"
-                    : "Discover brands looking for partnerships"}
+                      ? "Find the perfect influencers for your campaigns"
+                      : "Discover brands looking for partnerships"}
                 </p>
               </div>
             </div>

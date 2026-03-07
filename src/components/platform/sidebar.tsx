@@ -156,8 +156,8 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />

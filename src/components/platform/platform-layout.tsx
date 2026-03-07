@@ -19,7 +19,7 @@ export function PlatformLayout({ children }: { children: React.ReactNode }) {
     console.log('PlatformLayout - User:', session?.user);
     console.log('PlatformLayout - User type:', (session?.user as any)?.userType);
     console.log('PlatformLayout - User approved:', (session?.user as any)?.isApproved);
-    
+
     // Add a small delay to ensure session is fully loaded
     const timer = setTimeout(() => {
       // Only redirect if we're sure there's no session after loading is complete
@@ -28,17 +28,17 @@ export function PlatformLayout({ children }: { children: React.ReactNode }) {
         router.push("/login");
         return;
       }
-      
+
       // Check if user is suspended
       if (!isPending && session?.user && (session.user as any)?.isApproved === false) {
         console.log('User is suspended, redirecting to login');
         router.push("/login");
         return;
       }
-      
+
       console.log('PlatformLayout - Session valid, rendering content');
     }, 200);
-    
+
     return () => clearTimeout(timer);
   }, [session, isPending, router]);
 
@@ -59,9 +59,9 @@ export function PlatformLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar 
-        isMobileOpen={isMobileSidebarOpen} 
-        onMobileClose={() => setIsMobileSidebarOpen(false)} 
+      <Sidebar
+        isMobileOpen={isMobileSidebarOpen}
+        onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
@@ -80,8 +80,8 @@ export function PlatformLayout({ children }: { children: React.ReactNode }) {
           </div>
           <NotificationBell />
         </header>
-        
-        <main className="flex-1 overflow-y-auto">
+
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

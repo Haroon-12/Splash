@@ -10,7 +10,7 @@ const testimonials = [
     role: "Marketing Director at TechFlow",
     type: "Brand",
     content:
-      "Splash transformed how we connect with influencers. The AI matching is incredible - we found perfect partners in days, not months. Our campaign ROI increased by 300%.",
+      "Splash transformed how we connect with influencers. The AI matching is incredible - we found perfect partners in days, not months. Our campaign engagement increased by 300%.",
     rating: 5,
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
   },
