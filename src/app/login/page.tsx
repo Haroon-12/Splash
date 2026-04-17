@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +33,6 @@ export default function LoginPage() {
       const { data, error } = await authClient.signIn.email({
         email: formData.email,
         password: formData.password,
-        rememberMe: formData.rememberMe,
       });
 
       if (error?.code) {
@@ -135,21 +133,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="rememberMe"
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, rememberMe: checked as boolean })
-                  }
-                />
-                <label
-                  htmlFor="rememberMe"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Remember me
-                </label>
-              </div>
+
             </div>
 
             <Button
