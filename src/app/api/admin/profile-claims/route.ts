@@ -63,6 +63,9 @@ export async function GET(request: NextRequest) {
 // Approve or reject a profile claim (admin only)
 export async function PATCH(request: NextRequest) {
   try {
+    const session = await auth.api.getSession({ headers: request.headers });
+    const adminName = session?.user?.name || 'Admin';
+
     const body = await request.json();
     const { claimId, action, rejectionReason } = body;
 
@@ -136,7 +139,7 @@ export async function PATCH(request: NextRequest) {
     // Update the claim using file-based store
     const updatedClaim = await updateClaim(claimId, {
       status: action === 'approve' ? 'approved' : 'rejected',
-      reviewedBy: 'admin-user-id',
+      reviewedBy: adminName,
       reviewedAt: new Date().toISOString(),
       rejectionReason: action === 'reject' ? rejectionReason : null,
     });

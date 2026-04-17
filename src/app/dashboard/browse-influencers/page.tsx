@@ -617,8 +617,8 @@ export default function BrowseInfluencersPage() {
               className="bg-card rounded-xl lg:rounded-2xl p-5 lg:p-6 border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-xl cursor-pointer group relative overflow-hidden"
             >
               {/* Profile Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between mb-4 gap-2">
+                <div className="flex items-center gap-3 min-w-0">
                   <Avatar className="h-12 w-12 lg:h-16 lg:w-16 flex-shrink-0">
                     <AvatarImage
                       src={influencer.platformImage || influencer.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${influencer.name}`}
@@ -626,14 +626,14 @@ export default function BrowseInfluencersPage() {
                     />
                     <AvatarFallback>{influencer.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-lg">{influencer.name}</h3>
-                    <div className="text-sm text-muted-foreground">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-lg truncate">{influencer.name}</h3>
+                    <div className="text-sm text-muted-foreground truncate">
                       {influencer.email || "No email provided"}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {influencer.isPlatformUser ? (
                     <Badge variant="outline" className="text-xs text-green-600">✓ Has Account</Badge>
                   ) : (

@@ -76,7 +76,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
       name: "Ad Generation",
       href: "/dashboard/ad-generation",
       icon: Sparkles,
-      show: userType === "brand" || isAdmin,
+      show: userType === "brand",
     },
     {
       name: "Collaborations",

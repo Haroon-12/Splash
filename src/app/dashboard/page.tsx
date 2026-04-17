@@ -133,6 +133,7 @@ export default function DashboardPage() {
         icon: Users,
         gradient: "from-blue-500 to-cyan-500",
       },
+      /*
       {
         title: "System Analytics",
         description: "View platform statistics and metrics",
@@ -147,6 +148,7 @@ export default function DashboardPage() {
         icon: Shield,
         gradient: "from-green-500 to-emerald-500",
       },
+      */
     ]
     : userType === "brand"
       ? [
@@ -181,7 +183,7 @@ export default function DashboardPage() {
         {
           title: "Generate Ad",
           description: "Create AI-powered marketing content",
-          href: "/ads",
+          href: "/dashboard/ad-generation",
           icon: Sparkles,
           gradient: "from-indigo-500 to-purple-500",
         },
@@ -218,7 +220,7 @@ export default function DashboardPage() {
         {
           title: "Messages",
           description: "Connect with brands",
-          href: "/messages",
+          href: "/dashboard/chat",
           icon: MessageSquare,
           gradient: "from-indigo-500 to-purple-500",
         },
@@ -266,7 +268,6 @@ export default function DashboardPage() {
                   <div className={`p-2 lg:p-3 rounded-lg lg:rounded-xl bg-muted ${stat.color}`}>
                     <Icon className="w-4 h-4 lg:w-6 lg:h-6" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground" />
                 </div>
                 <p className="text-2xl lg:text-3xl font-bold mb-1">{stat.value}</p>
                 <p className="text-xs lg:text-sm text-muted-foreground">{stat.label}</p>
@@ -302,7 +303,6 @@ export default function DashboardPage() {
                     </div>
                     <h3 className="text-lg lg:text-xl font-semibold mb-1 lg:mb-2">{action.title}</h3>
                     <p className="text-sm text-muted-foreground">{action.description}</p>
-                    <ArrowUpRight className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground absolute top-5 right-5 lg:top-6 lg:right-6 group-hover:text-primary transition-colors" />
                   </motion.div>
                 </Link>
               );
@@ -310,7 +310,8 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Upgrade Banner (for free tier) */}
+        {/* Upgrade Banner (for free tier) / Hidden for now */}
+        {/*
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -339,6 +340,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         </motion.div>
+        */}
 
         {/* Getting Started (for new users) */}
         <motion.div
@@ -347,7 +349,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.5, delay: 0.5 }}
           className="bg-card rounded-xl lg:rounded-2xl p-6 lg:p-8 border border-border"
         >
-          <h3 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">Getting Started</h3>
+          <h3 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">Recommendations for Your Account</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3 lg:gap-4">
               <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 font-semibold text-sm lg:text-base">

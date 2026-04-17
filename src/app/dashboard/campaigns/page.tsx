@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { PlatformLayout } from "@/components/platform/platform-layout";
-import { Search, Sparkles, Calendar, DollarSign, Users, ArrowRight, Plus, Filter } from "lucide-react";
+import { Search, Sparkles, Calendar, DollarSign, Users, ArrowRight, Plus, Filter, Edit } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -295,13 +295,20 @@ export default function CampaignsPage() {
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter>
-                    <Link href={`/dashboard/campaigns/${campaign.id}`} className="w-full">
+                  <CardFooter className="flex gap-2">
+                    <Link href={`/dashboard/campaigns/${campaign.id}`} className="flex-1">
                       <Button variant="outline" className="w-full">
                         View Details
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
+                    {userType === "brand" && campaign.status !== "completed" && campaign.status !== "cancelled" && (
+                      <Link href={`/dashboard/campaigns/${campaign.id}/edit`} className="flex-none">
+                        <Button variant="outline" className="w-full px-3" title="Edit Campaign">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    )}
                   </CardFooter>
                 </Card>
               </motion.div>

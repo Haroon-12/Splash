@@ -829,11 +829,11 @@ export default function ChatPage() {
                           {other.email}
                         </p>
                       </div>
-                      {conversation.unreadCount && conversation.unreadCount > 0 && (
+                      {(conversation.unreadCount ?? 0) > 0 ? (
                         <span className="ml-auto inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-xs font-semibold bg-primary text-primary-foreground">
                           {conversation.unreadCount}
                         </span>
-                      )}
+                      ) : null}
                     </button>
                   );
                 })

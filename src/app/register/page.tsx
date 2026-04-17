@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle, Users, Building2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Users, Building2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
@@ -16,6 +16,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState<"type" | "form" | "claim">("type");
   const [userType, setUserType] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -237,6 +239,34 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!formData.name.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+
+    // Name should not contain numbers
+    if (/\d/.test(formData.name)) {
+      toast.error("Name cannot contain numbers");
+      return;
+    }
+
+    // Name should not contain special characters (allowing spaces, hyphens, and apostrophes)
+    if (/[!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?]+/.test(formData.name)) {
+      toast.error("Name cannot contain special characters");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -421,28 +451,47 @@ export default function RegisterPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                  placeholder="Create a password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Create a password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                  placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    required
-                />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
               </div>
 
               <div className="flex space-x-3">

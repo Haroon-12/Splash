@@ -309,36 +309,25 @@ export function NotificationBell() {
                             onClick={() => handleNotificationClick(notification)}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`text-lg ${getNotificationColor(notification.type)}`}>
+                              <div className={`text-lg flex-shrink-0 ${getNotificationColor(notification.type)}`}>
                                 {getNotificationIcon(notification.type)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between">
-                                  <h4 className={`text-sm font-medium ${!notification.isRead ? 'font-semibold' : ''}`}>
+                                <div className="flex items-center gap-2">
+                                  <h4 className={`text-sm font-medium truncate ${!notification.isRead ? 'font-semibold' : ''}`}>
                                     {notification.title}
                                   </h4>
                                   {!notification.isRead && (
-                                    <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1" />
+                                    <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                <p className="text-xs text-muted-foreground mt-1 break-words">
                                   {notification.message}
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-xs text-muted-foreground/60 mt-1">
                                   {new Date(notification.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteNotification(notification.id);
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
                             </div>
                           </motion.div>
                         ))}

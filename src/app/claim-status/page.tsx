@@ -25,6 +25,8 @@ interface ClaimStatus {
   csvRecordId: string;
   claimReason: string;
   status: 'pending' | 'approved' | 'rejected';
+  userName?: string;
+  userEmail?: string;
   reviewedBy?: string;
   reviewedAt?: string;
   rejectionReason?: string;
@@ -187,7 +189,10 @@ export default function PublicClaimStatusPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Profile</label>
-                    <p className="font-medium">{claimStatus.csvRecordId}</p>
+                    <p className="font-medium">{claimStatus.userName || claimStatus.csvRecordId}</p>
+                    {claimStatus.userEmail && (
+                      <p className="text-sm text-muted-foreground">{claimStatus.userEmail}</p>
+                    )}
                   </div>
                   
                   <div>
