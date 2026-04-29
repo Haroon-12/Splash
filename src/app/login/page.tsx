@@ -50,8 +50,6 @@ export default function LoginPage() {
       }
 
       console.log("Login successful, data:", data);
-      console.log("Session after login:", data?.session);
-      console.log("User after login:", data?.session?.user);
 
       toast.success("Welcome back!");
       
@@ -62,9 +60,9 @@ export default function LoginPage() {
       
       // Navigate to dashboard using router
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Login exception:", err);
-      toast.error(err.message || "Login failed");
+      toast.error(err instanceof Error ? err.message : "Login failed");
       setIsLoading(false);
     }
   };
