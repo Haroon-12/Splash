@@ -7,7 +7,7 @@
 /**
  * Parse follower count from string (handles K, M suffixes)
  */
-export function parseFollowerCount(count: string | null): number {
+export function parseFollowerCount(count: string | null | undefined): number {
   if (!count) return 0;
   
   const cleaned = count.toString().trim().replace(/,/g, '');
