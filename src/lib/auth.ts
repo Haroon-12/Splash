@@ -21,6 +21,18 @@ export const auth = betterAuth({
 			isApproved: {
 				type: "boolean",
 				required: false,
+			},
+			isSuspended: {
+				type: "boolean",
+				required: false,
+			},
+			suspensionReason: {
+				type: "string",
+				required: false,
+			},
+			csvRecordId: {
+				type: "string",
+				required: false,
 			}
 		}
 	},
