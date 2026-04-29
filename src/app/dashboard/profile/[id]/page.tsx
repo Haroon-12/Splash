@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PlatformLayout } from "@/components/platform/platform-layout";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ interface InfluencerProfile {
   verificationBadges?: string;
 }
 
-export default function InfluencerProfilePage() {
+function ProfileContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -819,5 +819,19 @@ export default function InfluencerProfilePage() {
         </motion.div>
       </div>
     </PlatformLayout>
+  );
+}
+
+export default function InfluencerProfilePage() {
+  return (
+    <Suspense fallback={
+      <PlatformLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </PlatformLayout>
+    }>
+      <ProfileContent />
+    </Suspense>
   );
 }
