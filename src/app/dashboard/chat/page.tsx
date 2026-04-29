@@ -12,6 +12,7 @@ import { Send, Search, Paperclip, Image as ImageIcon, Mic, X } from "lucide-reac
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { encryptText, decryptText, encryptBinary, decryptBinary, isEncrypted } from "@/lib/encryption-client";
+import { UpgradeRequired } from "@/components/platform/upgrade-required";
 
 interface Message {
   id: number;
@@ -319,6 +320,9 @@ export default function ChatPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
+  const [subscription, setSubscription] = useState<any>(null);
+  const [isSubLoading, setIsSubLoading] = useState(true);
+
   useEffect(() => {
     if (!isPending && !session?.user) {
       router.push("/login");
@@ -329,6 +333,25 @@ export default function ChatPage() {
       fetchConversations();
     }
   }, [session, isPending, router]);
+
+  useEffect(() => {
+    const fetchSub = async () => {
+      try {
+        const res = await fetch("/api/user/subscription");
+        if (res.ok) {
+          const data = await res.json();
+          setSubscription(data);
+        }
+      } catch (err) {} finally {
+        setIsSubLoading(false);
+      }
+    };
+    if (session?.user && (session.user as any).userType === "brand") {
+      fetchSub();
+    } else {
+      setIsSubLoading(false); // Influencers don't need subscription check
+    }
+  }, [session]);
 
   useEffect(() => {
     if (conversationIdParam && conversations.length > 0) {
@@ -749,7 +772,7 @@ export default function ChatPage() {
     return conversation.participant1;
   };
 
-  if (isPending || isLoading) {
+  if (isPending || isLoading || isSubLoading) {
     return (
       <PlatformLayout>
         <div className="flex items-center justify-center h-full">
@@ -761,6 +784,18 @@ export default function ChatPage() {
 
   if (!session?.user) {
     return null;
+  }
+
+  const isBasicBrand = (session.user as any).userType === "brand" && subscription?.planType === "basic";
+
+  if (isBasicBrand) {
+    return (
+      <UpgradeRequired 
+        withLayout
+        description="Direct messaging is a premium feature. To chat directly with influencers, negotiate deals, and manage collaborations seamlessly, please upgrade to the Professional or Premium plan."
+        buttonText="View Plans to Unlock Chat"
+      />
+    );
   }
 
   const filteredConversations = conversations.filter((conv) => {
