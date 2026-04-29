@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,7 @@ interface ClaimStatus {
   idDocument?: string;
 }
 
-export default function PublicClaimStatusPage() {
+function ClaimStatusContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null);
@@ -286,6 +286,21 @@ export default function PublicClaimStatusPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function PublicClaimStatusPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading claim status...</p>
+        </div>
+      </div>
+    }>
+      <ClaimStatusContent />
+    </Suspense>
   );
 }
 
