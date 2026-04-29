@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/libsql';
+import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
@@ -20,5 +20,5 @@ function getDb() {
   }
 }
 
-export const db = getDb();
+export const db = getDb() as unknown as LibSQLDatabase<typeof schema>;
 export type Database = typeof db;

@@ -22,7 +22,7 @@ async function main() {
         .groupBy(affiliateLinks.id);
 
     const groupedMap = new Map();
-    rawLinks.forEach(link => {
+    rawLinks.forEach((link: any) => {
         const rawTitle = link.title || 'Untitled Link';
         if (!groupedMap.has(rawTitle)) {
             groupedMap.set(rawTitle, { count: 0, clicks: 0 });
