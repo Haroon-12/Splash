@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -41,6 +41,25 @@ export default function AdGenerationPage() {
     adType: "image",
   });
   const [generatedAd, setGeneratedAd] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+
+  useEffect(() => {
+    if (userType === "brand") {
+      fetch("/api/user/subscription")
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.error) setSubscription(data);
+        });
+    }
+  }, [userType]);
+
+  const currentPlan = subscription?.planType || "basic";
+  const interval = subscription?.billingInterval || "monthly";
+  const usedAds = subscription?.adsGenerated || 0;
+  
+  let maxAds = 0;
+  if (currentPlan === "tier1") maxAds = interval === "yearly" ? 150 : 10;
+  if (currentPlan === "premium" || currentPlan === "team") maxAds = Infinity;
 
   // Redirect influencers away from this page
   if (userType !== "brand") {
@@ -116,10 +135,12 @@ export default function AdGenerationPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white/80 mb-1">Ad Generations This Month</p>
-              <p className="text-3xl font-bold">0 / 5</p>
-              <p className="text-sm text-white/80 mt-1">
-                Free plan - Resets in 30 days
+              <p className="text-white/80 mb-1">Ad Generations {interval === "yearly" ? "This Year" : "This Month"}</p>
+              <p className="text-3xl font-bold">
+                {usedAds} / {maxAds === Infinity ? "Unlimited" : maxAds}
+              </p>
+              <p className="text-sm text-white/80 mt-1 capitalize">
+                {currentPlan} plan
               </p>
             </div>
             <Sparkles className="w-12 h-12 text-white/50" />
