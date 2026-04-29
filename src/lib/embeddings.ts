@@ -8,12 +8,12 @@
 import { pipeline, Pipeline } from '@xenova/transformers';
 
 // Cache the pipeline to avoid reloading
-let embeddingPipeline: Pipeline | null = null;
+let embeddingPipeline: any = null;
 
 /**
  * Initialize the embedding pipeline
  */
-async function getEmbeddingPipeline(): Promise<Pipeline> {
+async function getEmbeddingPipeline(): Promise<any> {
   if (!embeddingPipeline) {
     // Use a lightweight sentence transformer model
     // This model runs locally and doesn't require API keys
@@ -37,7 +37,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     const result = await pipe(text, { pooling: 'mean', normalize: true });
     
     // Convert tensor to array
-    const embedding = Array.from(result.data);
+    const embedding = Array.from(result.data) as number[];
     return embedding;
   } catch (error) {
     console.error('Error generating embedding:', error);
