@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlatformLayout } from "@/components/platform/platform-layout";
 import { Button } from "@/components/ui/button";
@@ -63,7 +63,7 @@ interface Recommendation {
   influencer: any;
 }
 
-export default function ProductRecommendationPage() {
+function RecommendationContent() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -179,9 +179,9 @@ export default function ProductRecommendationPage() {
       } else {
         throw new Error(recData.error || "Failed to get recommendations");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error getting recommendations:", error);
-      toast.error(error.message || "Failed to get recommendations");
+      toast.error(error instanceof Error ? error.message : "Failed to get recommendations");
     } finally {
       setIsLoading(false);
     }
@@ -692,6 +692,20 @@ Looking forward to hearing from you!`;
 
       </div>
     </PlatformLayout>
+  );
+}
+
+export default function ProductRecommendationPage() {
+  return (
+    <Suspense fallback={
+      <PlatformLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </PlatformLayout>
+    }>
+      <RecommendationContent />
+    </Suspense>
   );
 }
 
