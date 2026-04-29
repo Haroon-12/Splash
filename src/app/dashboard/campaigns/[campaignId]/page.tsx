@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Sparkles, Users, TrendingUp, MessageSquare } from "lucide-react";
+import { ArrowLeft, Sparkles, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { motion } from "framer-motion";
@@ -56,6 +59,12 @@ export default function CampaignDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [isSendingInvite, setIsSendingInvite] = useState<string | null>(null);
+
+  // Invite modal state
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteInfluencerId, setInviteInfluencerId] = useState<string | null>(null);
+  const [inviteInfluencerName, setInviteInfluencerName] = useState("");
+  const [dealAmountInput, setDealAmountInput] = useState("");
 
   useEffect(() => {
     if (campaignId) {
@@ -209,11 +218,23 @@ Looking forward to hearing from you!`;
     }
   };
 
-  const handleSendInvite = async (influencerId: string) => {
-    if (!campaign) return;
+  const openInviteModal = (influencerId: string, influencerName: string) => {
+    setInviteInfluencerId(influencerId);
+    setInviteInfluencerName(influencerName);
+    setDealAmountInput("");
+    setInviteModalOpen(true);
+  };
+
+  const handleSendInvite = async () => {
+    if (!campaign || !inviteInfluencerId) return;
+
+    const dealAmountCents = dealAmountInput && !isNaN(Number(dealAmountInput)) && Number(dealAmountInput) > 0
+      ? Math.round(Number(dealAmountInput) * 100)
+      : undefined;
 
     try {
-      setIsSendingInvite(influencerId);
+      setIsSendingInvite(inviteInfluencerId);
+      setInviteModalOpen(false);
       const token = localStorage.getItem("bearer_token");
       const response = await fetch("/api/collaborations", {
         method: "POST",
@@ -222,8 +243,9 @@ Looking forward to hearing from you!`;
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          influencerId,
-          campaignId: campaign.id
+          influencerId: inviteInfluencerId,
+          campaignId: campaign.id,
+          ...(dealAmountCents ? { dealAmount: dealAmountCents } : {})
         })
       });
 
@@ -231,9 +253,8 @@ Looking forward to hearing from you!`;
 
       if (response.ok) {
         toast.success("Invite sent successfully!");
-        // Update local state to reflect pending status
         setRecommendations(prev => prev.map(rec =>
-          rec.influencerId === influencerId
+          rec.influencerId === inviteInfluencerId
             ? { ...rec, collaborationStatus: 'pending' }
             : rec
         ));
@@ -245,6 +266,7 @@ Looking forward to hearing from you!`;
       toast.error("An error occurred while sending the invite");
     } finally {
       setIsSendingInvite(null);
+      setInviteInfluencerId(null);
     }
   };
 
@@ -514,9 +536,9 @@ Looking forward to hearing from you!`;
                                   variant="outline"
                                   className="flex-1"
                                   disabled={isSendingInvite === rec.influencerId}
-                                  onClick={() => handleSendInvite(rec.influencerId)}
+                                  onClick={() => openInviteModal(rec.influencerId, rec.influencerName)}
                                 >
-                                  {isSendingInvite === rec.influencerId ? "..." : "Invite"}
+                                  {isSendingInvite === rec.influencerId ? "Sending..." : "Invite"}
                                 </Button>
                               )}
                             </div>
@@ -583,6 +605,47 @@ Looking forward to hearing from you!`;
           </Card>
         )}
       </div>
+
+      {/* Invite Modal */}
+      <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Send Collaboration Invite</DialogTitle>
+            <DialogDescription>
+              Invite <strong>{inviteInfluencerName}</strong> to join your campaign <strong>{campaign?.title}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="dealAmount">Deal Amount (optional)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <Input
+                  id="dealAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 250"
+                  value={dealAmountInput}
+                  onChange={(e) => setDealAmountInput(e.target.value)}
+                  className="pl-7"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave blank if you prefer to negotiate the amount in chat.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendInvite}>
+              Send Invite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PlatformLayout>
   );
 }
