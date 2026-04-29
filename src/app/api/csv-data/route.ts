@@ -51,7 +51,7 @@ function getCSVData(): CSVInfluencer[] {
     
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim());
-      const record = {};
+      const record: any = {};
       headers.forEach((header, index) => {
         record[header] = values[index] || '';
       });
