@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
       campaigns: brandCampaigns,
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching campaigns:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch campaigns' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch campaigns' },
       { status: 500 }
     );
   }
@@ -101,10 +101,10 @@ export async function POST(request: NextRequest) {
       campaign: newCampaign[0],
     }, { status: 201 });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating campaign:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create campaign' },
+      { error: error instanceof Error ? error.message : 'Failed to create campaign' },
       { status: 500 }
     );
   }
