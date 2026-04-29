@@ -20,7 +20,6 @@ import {
   Facebook,
   MessageSquare,
   Calendar,
-  DollarSign,
   MapPin,
   Star,
   Image as ImageIcon,
@@ -441,6 +440,8 @@ export default function ProfileEditPage() {
       setSaving(false);
     }
   };
+
+
 
   if (isPending || loading) {
     return (
@@ -925,6 +926,8 @@ export default function ProfileEditPage() {
 
           {/* Advanced Tab */}
           <TabsContent value="advanced" className="space-y-6">
+
+
             <Card>
               <CardHeader>
                 <CardTitle>Availability</CardTitle>
