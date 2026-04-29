@@ -30,7 +30,7 @@ const SBOX = [
   
   // Helper functions
   function xtime(a) {
-    return ((a << 1) & 0xff) ^ (0x1b if (a & 0x80) else 0x00);
+    return ((a << 1) & 0xff) ^ ((a & 0x80) ? 0x1b : 0x00);
   }
   
   function mul(a, b) {
