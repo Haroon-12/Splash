@@ -59,6 +59,7 @@ export default function BrowseInfluencersPage() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [dealAmount, setDealAmount] = useState<string>("");
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [filters, setFilters] = useState({
     category: "",
@@ -228,15 +229,23 @@ export default function BrowseInfluencersPage() {
       toast.error("Please select a campaign");
       return;
     }
+    if (!dealAmount || isNaN(Number(dealAmount)) || Number(dealAmount) <= 0) {
+      toast.error("Please enter a valid deal amount");
+      return;
+    }
 
     try {
       setIsSendingInvite(true);
+      // Convert dollar amount to cents for the backend
+      const amountInCents = Math.round(Number(dealAmount) * 100).toString();
+      
       const response = await fetch("/api/collaborations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           influencerId: selectedInfluencerId,
-          campaignId: parseInt(selectedCampaignId)
+          campaignId: parseInt(selectedCampaignId),
+          dealAmount: amountInCents
         })
       });
 
@@ -847,6 +856,17 @@ export default function BrowseInfluencersPage() {
                     )}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Deal Amount ($)</label>
+                <Input 
+                  type="number" 
+                  min="1" 
+                  placeholder="e.g. 100" 
+                  value={dealAmount} 
+                  onChange={(e) => setDealAmount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">The influencer can accept this or propose a different amount.</p>
               </div>
             </div>
             <DialogFooter>
