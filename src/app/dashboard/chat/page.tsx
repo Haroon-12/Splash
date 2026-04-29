@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlatformLayout } from "@/components/platform/platform-layout";
@@ -298,7 +298,7 @@ function AttachmentDisplay({
   );
 }
 
-export default function ChatPage() {
+function ChatContent() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1081,5 +1081,19 @@ export default function ChatPage() {
         </div>
       </div>
     </PlatformLayout>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <PlatformLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </PlatformLayout>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }
