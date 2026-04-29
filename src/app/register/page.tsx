@@ -81,7 +81,7 @@ export default function RegisterPage() {
 
       if (error) {
         console.error('Signup error:', error);
-        toast.error(error.message || "Failed to create account");
+        toast.error((error as any).message || "Failed to create account");
         return null;
       }
 
