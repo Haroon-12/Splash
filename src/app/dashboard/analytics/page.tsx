@@ -4,11 +4,27 @@ import { redirect } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { AnalyticsDashboard } from "@/components/platform/analytics-dashboard";
 import { PlatformLayout } from "@/components/platform/platform-layout";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { UpgradeRequired } from "@/components/platform/upgrade-required";
 
 export default function AnalyticsPage() {
   const { data: session, isPending } = useSession();
+  const [subStatus, setSubStatus] = useState<any>(null);
+  const [subLoading, setSubLoading] = useState(true);
 
-  if (isPending) {
+  useEffect(() => {
+    fetch("/api/user/subscription")
+      .then(res => res.json())
+      .then(data => {
+        setSubStatus(data);
+        setSubLoading(false);
+      })
+      .catch(() => setSubLoading(false));
+  }, []);
+
+  if (isPending || subLoading) {
     return (
       <PlatformLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -37,6 +53,17 @@ export default function AnalyticsPage() {
           </p>
         </div>
       </PlatformLayout>
+    );
+  }
+
+  if (userType === "brand" && subStatus?.planType === "basic") {
+    return (
+      <UpgradeRequired 
+        withLayout
+        title="Analytics Locked"
+        description="Detailed campaign analytics and link tracking are only available on Professional and Premium plans. Upgrade to gain deep insights into your influencer campaigns."
+        buttonText="Upgrade Plan"
+      />
     );
   }
 
