@@ -35,6 +35,10 @@ export async function GET(request: NextRequest) {
             .select({
                 id: collaborations.id,
                 status: collaborations.status,
+                dealAmount: collaborations.dealAmount,
+                proposedAmount: collaborations.proposedAmount,
+                negotiationStatus: collaborations.negotiationStatus,
+                paymentStatus: collaborations.paymentStatus,
                 startedAt: collaborations.startedAt,
                 completedAt: collaborations.completedAt,
                 campaignId: collaborations.campaignId,
@@ -69,6 +73,10 @@ export async function GET(request: NextRequest) {
                 uniqueCollabs.set(r.id, {
                     id: r.id,
                     status: r.status,
+                    dealAmount: r.dealAmount,
+                    proposedAmount: r.proposedAmount,
+                    negotiationStatus: r.negotiationStatus,
+                    paymentStatus: r.paymentStatus,
                     brandId: r.brandId,
                     influencerId: r.influencerId,
                     campaignId: r.campaignId,
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { influencerId, campaignId } = body;
+        const { influencerId, campaignId, dealAmount } = body;
 
         if (!influencerId || !campaignId) {
             return NextResponse.json({ error: 'Influencer ID and Campaign ID are required.' }, { status: 400 });
@@ -122,6 +130,8 @@ export async function POST(request: NextRequest) {
             brandId: currentUser.id,
             influencerId: influencerId,
             campaignId: campaignId,
+            dealAmount: dealAmount ? parseInt(dealAmount) : null,
+            negotiationStatus: 'pending_influencer',
             status: 'pending',
             createdAt: new Date(),
             updatedAt: new Date()
@@ -155,7 +165,8 @@ export async function PATCH(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { collaborationId, status } = body; // status can be 'active' (accept), 'cancelled' (decline), 'completed'
+        const { collaborationId, status, proposedAmount } = body; 
+        // status can be 'active' (accept), 'cancelled' (decline), 'completed', 'propose', 'agree_proposal'
 
         if (!collaborationId || !status) {
             return NextResponse.json({ error: 'Collaboration ID and Status are required.' }, { status: 400 });
@@ -180,14 +191,36 @@ export async function PATCH(request: NextRequest) {
 
         // Update payload
         const updatePayload: any = {
-            status: status,
             updatedAt: new Date()
         };
 
-        if (status === 'active' && collab.status === 'pending') {
+        let notifTitle = "Collaboration Update";
+        let notifMessage = `Your collaboration status was updated to ${status}.`;
+
+        if (status === 'propose' && currentUser.userType === 'influencer') {
+            updatePayload.proposedAmount = parseInt(proposedAmount);
+            updatePayload.negotiationStatus = 'pending_brand';
+            notifTitle = "Counter Offer Received";
+            notifMessage = `The influencer has proposed a new deal amount for your campaign.`;
+        } else if (status === 'agree_proposal' && currentUser.userType === 'brand') {
+            updatePayload.dealAmount = collab.proposedAmount;
+            updatePayload.proposedAmount = null;
+            updatePayload.negotiationStatus = 'accepted';
+            notifTitle = "Offer Accepted! 🎉";
+            notifMessage = `The brand agreed to your counter offer!`;
+        } else if (status === 'active' && collab.status === 'pending') {
+            updatePayload.status = 'active';
+            updatePayload.negotiationStatus = 'accepted';
             updatePayload.startedAt = new Date();
+            notifTitle = "Offer Accepted! 🎉";
+            notifMessage = `Great news! An influencer accepted your campaign invite. You can now chat with them to start the campaign.`;
         } else if (status === 'completed') {
+            updatePayload.status = 'completed';
             updatePayload.completedAt = new Date();
+        } else if (status === 'cancelled') {
+            updatePayload.status = 'cancelled';
+            notifTitle = "Collaboration Cancelled";
+            notifMessage = `A collaboration deal was declined or cancelled.`;
         }
 
         await db.update(collaborations)
@@ -196,23 +229,13 @@ export async function PATCH(request: NextRequest) {
 
         // Send a notification to the OTHER party that the status changed
         const recipientId = currentUser.userType === 'brand' ? collab.influencerId : collab.brandId;
-        let notifTitle = "Collaboration Update";
-        let notifMessage = `Your collaboration status was updated to ${status}.`;
-
-        if (status === 'active') {
-            notifTitle = "Offer Accepted! 🎉";
-            notifMessage = `Great news! An influencer accepted your campaign invite.`;
-        } else if (status === 'cancelled') {
-            notifTitle = "Collaboration Cancelled";
-            notifMessage = `A collaboration deal was declined or cancelled.`;
-        }
-
+        
         await db.insert(notifications).values({
             userId: recipientId,
             type: 'collaboration_update',
             title: notifTitle,
             message: notifMessage,
-            isSmartAlert: false,
+            isSmartAlert: true,
             actionUrl: '/dashboard/campaigns',
             createdAt: new Date()
         });
