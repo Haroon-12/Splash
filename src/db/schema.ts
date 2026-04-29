@@ -8,25 +8,25 @@ export const user = sqliteTable("user", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: integer("email_verified", { mode: "boolean" })
-    .$defaultFn(() => false)
+    .default(false)
     .notNull(),
   image: text("image"),
   userType: text("user_type"),
   isApproved: integer("is_approved", { mode: "boolean" })
-    .$defaultFn(() => false)
+    .default(false)
     .notNull(),
   approvedBy: text("approved_by"),
   csvRecordId: text("csv_record_id"),
   approvedAt: integer("approved_at", { mode: "timestamp" }),
   isSuspended: integer("is_suspended", { mode: "boolean" })
-    .$defaultFn(() => false)
+    .default(false)
     .notNull(),
   suspensionReason: text("suspension_reason"),
   createdAt: integer("created_at", { mode: "timestamp" })
-    .$defaultFn(() => new Date())
+    .default(new Date())
     .notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" })
-    .$defaultFn(() => new Date())
+    .default(new Date())
     .notNull(),
 });
 

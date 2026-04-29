@@ -6,7 +6,7 @@ const isTursoEnabled = process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUT
 const dbConfig: Config = defineConfig({
   schema: './src/db/schema.ts',
   out: './drizzle',
-  dialect: isTursoEnabled ? 'libsql' : 'sqlite',
+  dialect: isTursoEnabled ? 'turso' : 'sqlite',
   dbCredentials: {
     url: isTursoEnabled ? process.env.TURSO_CONNECTION_URL! : './local.db',
     authToken: isTursoEnabled ? process.env.TURSO_AUTH_TOKEN : undefined,
