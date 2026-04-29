@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { messages, user, conversations, notifications } from '@/db/schema';
-import { eq, or, and, desc } from 'drizzle-orm';
+import { messages, user, conversations, notifications, subscriptions } from '@/db/schema';
+import { eq, desc, or, and } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -128,6 +128,22 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Brand Subscription Check
+    const sender = senderExists[0];
+    if (sender.userType === "brand") {
+      const sub = await db.query.subscriptions.findFirst({
+        where: eq(subscriptions.brandId, senderId),
+      });
+      const planType = sub?.status === "active" ? sub.planType : "basic";
+      if (planType === "basic") {
+        return NextResponse.json(
+          { error: 'Chat is not available for Free plan brands. Please upgrade to send messages.', code: 'PLAN_UPGRADE_REQUIRED' },
+          { status: 403 }
+        );
+      }
+    }
+
 
     // Insert new message
     const newMessage = await db
