@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Build and execute query
-    let query = db.select().from(user);
+    let query = db.select().from(user).$dynamic();
     
     // Apply filters if any conditions exist
     if (conditions.length > 0) {
