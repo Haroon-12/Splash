@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { UpgradeRequired } from "@/components/platform/upgrade-required";
 
 export default function AdGenerationPage() {
   const { data: session, isPending } = useSession();
@@ -21,6 +22,8 @@ export default function AdGenerationPage() {
 
   // API State
   const [isGenerating, setIsGenerating] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [isSubLoading, setIsSubLoading] = useState(true);
   const [generatedData, setGeneratedData] = useState<{
     imageUrl: string;
     taglines: string[];
@@ -51,7 +54,24 @@ export default function AdGenerationPage() {
     }
   }, [session, router]);
 
-  if (isPending) {
+  useEffect(() => {
+    const fetchSub = async () => {
+      try {
+        const res = await fetch("/api/user/subscription");
+        if (res.ok) {
+          const data = await res.json();
+          setSubscription(data);
+        }
+      } catch (err) {} finally {
+        setIsSubLoading(false);
+      }
+    };
+    if (session?.user && (session.user as any).userType === "brand") {
+      fetchSub();
+    }
+  }, [session]);
+
+  if (isPending || isSubLoading) {
     return (
       <PlatformLayout>
         <div className="flex items-center justify-center h-full">
@@ -157,6 +177,19 @@ export default function AdGenerationPage() {
     win?.document.write(`<html><body style="margin:0;display:flex;justify-content:center;align-items:center;background:#0f172a;height:100vh;"><img src="${generatedData.imageUrl}" style="max-width:100%;max-height:100%;object-fit:contain;"/></body></html>`);
   };
 
+  const isYearly = subscription?.billingInterval === "yearly";
+  let maxGenerations: number | "Unlimited" = "Unlimited";
+  if (subscription?.planType === "tier1") {
+    maxGenerations = isYearly ? 150 : 10;
+  }
+  
+  const adsGenerated = subscription?.adsGenerated || 0;
+  const progressPercent = maxGenerations === "Unlimited" 
+    ? 100 
+    : Math.min((adsGenerated / maxGenerations) * 100, 100);
+
+  const isLimitReached = maxGenerations !== "Unlimited" && adsGenerated >= maxGenerations;
+
   return (
     <PlatformLayout>
       <div className="p-4 lg:p-8 max-w-7xl mx-auto">
@@ -171,36 +204,49 @@ export default function AdGenerationPage() {
           </p>
         </div>
 
-        {/* Usage Stats (Simulated) / Hidden for now */}
-        {/*
-        <Card className="mb-6 lg:mb-8 bg-gradient-to-r from-primary/10 to-accent/10">
-          <CardHeader className="pb-3 lg:pb-6">
-            <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
-              <Wand2 className="h-4 w-4 lg:h-5 lg:w-5" />
-              Your Ad Generation Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-4">
-              <div className="flex-shrink-0">
-                <p className="text-2xl lg:text-3xl font-bold">5</p>
-                <p className="text-xs lg:text-sm text-muted-foreground">Ads Generated This Month</p>
-              </div>
-              <div className="flex-1">
-                <div className="w-full bg-muted rounded-full h-2.5 lg:h-3">
-                  <div className="bg-primary h-2.5 lg:h-3 rounded-full" style={{ width: "50%" }}></div>
+        {subscription?.planType === "basic" && (
+          <div className="mb-8">
+            <UpgradeRequired 
+              description="AI Ad Generation is a premium feature. Please upgrade your plan to unlock AI creatives." 
+            />
+          </div>
+        )}
+
+        {/* Usage Stats */}
+        {subscription?.planType !== "basic" && (
+          <Card className="mb-6 lg:mb-8 bg-gradient-to-r from-primary/10 to-accent/10">
+            <CardHeader className="pb-3 lg:pb-6">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <Wand2 className="h-4 w-4 lg:h-5 lg:w-5" />
+                Your Ad Generation Usage
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-4">
+                <div className="flex-shrink-0">
+                  <p className="text-2xl lg:text-3xl font-bold">{adsGenerated}</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Ads Generated {isYearly ? 'This Year' : 'This Month'}</p>
                 </div>
+                <div className="flex-1">
+                  <div className="w-full bg-muted rounded-full h-2.5 lg:h-3">
+                    <div 
+                      className={`h-2.5 lg:h-3 rounded-full ${maxGenerations === "Unlimited" ? "bg-green-500" : isLimitReached ? "bg-red-500" : "bg-primary"}`} 
+                      style={{ width: `${maxGenerations === "Unlimited" ? 100 : progressPercent}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <Badge variant={isLimitReached ? "destructive" : "outline"} className="text-sm lg:text-base px-3 py-1.5 lg:px-4 lg:py-2 w-fit">
+                  {maxGenerations === "Unlimited" ? "Unlimited Generations" : `${adsGenerated} / ${maxGenerations} Used`}
+                </Badge>
               </div>
-              <Badge variant="outline" className="text-sm lg:text-lg px-3 py-1.5 lg:px-4 lg:py-2 w-fit">
-                Free Plan: 5/10 Used
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3 lg:mt-4">
-              Upgrade to Pro ($25/month) for 10 ads or Premium ($60/month) for unlimited generation
-            </p>
-          </CardContent>
-        </Card>
-        */}
+              {maxGenerations !== "Unlimited" && (
+                <p className="text-xs text-muted-foreground mt-3 lg:mt-4">
+                  Need more? Upgrade to the Premium or Team plan for unlimited generations!
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 lg:gap-8">
           {/* Ad Creation Form */}
@@ -323,7 +369,7 @@ export default function AdGenerationPage() {
                 className="w-full gap-2 text-sm lg:text-base"
                 size="lg"
                 onClick={handleGenerate}
-                disabled={isGenerating}
+                disabled={isGenerating || subscription?.planType === "basic" || isLimitReached}
               >
                 {isGenerating ? (
                   <>
