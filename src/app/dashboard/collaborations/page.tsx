@@ -8,12 +8,18 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Clock, Briefcase, DollarSign, MessageSquare } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Briefcase, MessageSquare } from "lucide-react";
 
 interface Collaboration {
     id: number;
     status: string;
+    dealAmount: number | null;
+    proposedAmount: number | null;
+    negotiationStatus: string;
+    paymentStatus: string;
     brandId: string;
     influencerId: string;
     campaignId: number;
@@ -30,6 +36,10 @@ export default function CollaborationsPage() {
     const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isStartingChat, setIsStartingChat] = useState<number | null>(null);
+
+    const [isProposeModalOpen, setIsProposeModalOpen] = useState(false);
+    const [proposeCollabId, setProposeCollabId] = useState<number | null>(null);
+    const [proposedAmount, setProposedAmount] = useState("");
 
     useEffect(() => {
         if (!isPending && !session?.user) {
@@ -58,20 +68,24 @@ export default function CollaborationsPage() {
         }
     };
 
-    const updateStatus = async (collabId: number, newStatus: string) => {
+
+
+    const updateStatus = async (collabId: number, newStatus: string, extraData: any = {}) => {
         try {
             const response = await fetch("/api/collaborations", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     collaborationId: collabId,
-                    status: newStatus
+                    status: newStatus,
+                    ...extraData
                 })
             });
 
             if (response.ok) {
-                toast.success(`Collaboration ${newStatus === 'active' ? 'accepted' : 'declined'}`);
-                fetchCollaborations(); // Refresh the list
+                toast.success(`Collaboration updated successfully`);
+                setIsProposeModalOpen(false);
+                fetchCollaborations();
             } else {
                 const data = await response.json();
                 toast.error(data.error || "Failed to update status");
@@ -79,6 +93,16 @@ export default function CollaborationsPage() {
         } catch (error) {
             console.error("Error updating collaboration:", error);
             toast.error("An error occurred");
+        }
+    };
+
+    const handleProposeSubmit = () => {
+        if (!proposedAmount || isNaN(Number(proposedAmount)) || Number(proposedAmount) <= 0) {
+            toast.error("Enter a valid amount");
+            return;
+        }
+        if (proposeCollabId) {
+            updateStatus(proposeCollabId, "propose", { proposedAmount: Math.round(Number(proposedAmount) * 100) });
         }
     };
 
@@ -112,6 +136,11 @@ export default function CollaborationsPage() {
                 const data = await conversationResponse.json();
                 conversationId = data.conversationId;
             } else {
+                const errorData = await conversationResponse.json();
+                if (errorData.code === "PLAN_UPGRADE_REQUIRED") {
+                    toast.error(errorData.error);
+                    return;
+                }
                 throw new Error("Failed to start conversation");
             }
 
@@ -123,6 +152,8 @@ export default function CollaborationsPage() {
             setIsStartingChat(null);
         }
     };
+
+
 
     if (isPending || isLoading) {
         return (
@@ -136,14 +167,27 @@ export default function CollaborationsPage() {
 
     const isBrand = (session?.user as any)?.userType === "brand";
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'pending': return <Badge variant="outline" className="text-yellow-500 border-yellow-500"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
-            case 'active': return <Badge variant="outline" className="text-blue-500 border-blue-500"><Briefcase className="w-3 h-3 mr-1" /> Active</Badge>;
-            case 'completed': return <Badge variant="outline" className="text-green-500 border-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Completed</Badge>;
-            case 'cancelled': return <Badge variant="outline" className="text-red-500 border-red-500"><XCircle className="w-3 h-3 mr-1" /> Cancelled/Declined</Badge>;
-            default: return <Badge variant="outline">{status}</Badge>;
+    const getStatusBadge = (collab: Collaboration) => {
+        if (collab.status === 'pending') {
+            if (collab.negotiationStatus === 'pending_influencer') {
+                return <Badge variant="outline" className="text-yellow-500 border-yellow-500"><Clock className="w-3 h-3 mr-1" /> Waiting for Influencer</Badge>;
+            } else if (collab.negotiationStatus === 'pending_brand') {
+                return <Badge variant="outline" className="text-orange-500 border-orange-500"><Clock className="w-3 h-3 mr-1" /> Waiting for Brand</Badge>;
+            }
+            return <Badge variant="outline" className="text-yellow-500 border-yellow-500"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
         }
+        if (collab.status === 'active') {
+            return <Badge variant="outline" className="text-blue-500 border-blue-500"><Briefcase className="w-3 h-3 mr-1" /> Active</Badge>;
+        }
+        if (collab.status === 'completed') return <Badge variant="outline" className="text-green-500 border-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Completed</Badge>;
+        if (collab.status === 'cancelled') return <Badge variant="outline" className="text-red-500 border-red-500"><XCircle className="w-3 h-3 mr-1" /> Cancelled/Declined</Badge>;
+        
+        return <Badge variant="outline">{collab.status}</Badge>;
+    };
+
+    const formatCurrency = (cents: number | null) => {
+        if (cents === null) return "N/A";
+        return `$${(cents / 100).toFixed(2)}`;
     };
 
     return (
@@ -189,7 +233,7 @@ export default function CollaborationsPage() {
                                 <Card className="h-full flex flex-col hover:border-primary/50 transition-colors">
                                     <CardHeader>
                                         <div className="flex justify-between items-start mb-2">
-                                            {getStatusBadge(collab.status)}
+                                            {getStatusBadge(collab)}
                                         </div>
                                         <CardTitle className="text-xl line-clamp-1">{collab.campaignTitle}</CardTitle>
                                         <CardDescription>
@@ -198,42 +242,79 @@ export default function CollaborationsPage() {
                                     </CardHeader>
 
                                     <CardContent className="flex-grow">
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <div className="flex justify-between">
-                                                <span>Status</span>
-                                                <span className="capitalize font-medium text-foreground">{collab.status}</span>
+                                        <div className="space-y-3 text-sm text-muted-foreground">
+                                            <div className="flex justify-between items-center p-2 bg-muted rounded-md">
+                                                <span className="font-medium">Deal Amount</span>
+                                                <span className="font-bold text-foreground text-base">
+                                                    {formatCurrency(collab.dealAmount)}
+                                                </span>
                                             </div>
+                                            
+                                            {collab.proposedAmount && collab.negotiationStatus === 'pending_brand' && (
+                                                <div className="flex justify-between items-center p-2 bg-orange-50 dark:bg-orange-950/30 rounded-md">
+                                                    <span className="font-medium text-orange-600 dark:text-orange-400">Counter Offer</span>
+                                                    <span className="font-bold text-orange-600 dark:text-orange-400 text-base">
+                                                        {formatCurrency(collab.proposedAmount)}
+                                                    </span>
+                                                </div>
+                                            )}
+
                                             {collab.startedAt && (
                                                 <div className="flex justify-between">
                                                     <span>Accepted On</span>
                                                     <span>{new Date(collab.startedAt).toLocaleDateString()}</span>
                                                 </div>
                                             )}
-                                            {collab.completedAt && (
-                                                <div className="flex justify-between">
-                                                    <span>Completed On</span>
-                                                    <span>{new Date(collab.completedAt).toLocaleDateString()}</span>
-                                                </div>
-                                            )}
                                         </div>
                                     </CardContent>
 
                                     <CardFooter className="flex flex-col gap-2">
-                                        {/* INFLUENCER VIEW: Accepting or Declining Pending Offers */}
-                                        {!isBrand && collab.status === 'pending' && (
-                                            <div className="flex w-full gap-2">
+                                        {/* INFLUENCER VIEW: Pending Offer */}
+                                        {!isBrand && collab.status === 'pending' && collab.negotiationStatus === 'pending_influencer' && (
+                                            <div className="flex flex-col w-full gap-2">
+                                                <Button
+                                                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                                    onClick={() => updateStatus(collab.id, 'active')}
+                                                >
+                                                    Accept Deal ({formatCurrency(collab.dealAmount)})
+                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-1/2"
+                                                        onClick={() => {
+                                                            setProposeCollabId(collab.id);
+                                                            setIsProposeModalOpen(true);
+                                                        }}
+                                                    >
+                                                        Counter
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-1/2 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                                                        onClick={() => updateStatus(collab.id, 'cancelled')}
+                                                    >
+                                                        Decline
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* BRAND VIEW: Influencer counter-offered */}
+                                        {isBrand && collab.status === 'pending' && collab.negotiationStatus === 'pending_brand' && (
+                                            <div className="flex flex-col w-full gap-2">
+                                                <Button
+                                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                                                    onClick={() => updateStatus(collab.id, 'agree_proposal')}
+                                                >
+                                                    Accept Counter ({formatCurrency(collab.proposedAmount)})
+                                                </Button>
                                                 <Button
                                                     variant="outline"
-                                                    className="w-1/2 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                                                    className="w-full hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                                                     onClick={() => updateStatus(collab.id, 'cancelled')}
                                                 >
                                                     Decline
-                                                </Button>
-                                                <Button
-                                                    className="w-1/2 bg-green-600 hover:bg-green-700 text-white"
-                                                    onClick={() => updateStatus(collab.id, 'active')}
-                                                >
-                                                    Accept Deal
                                                 </Button>
                                             </div>
                                         )}
@@ -241,7 +322,7 @@ export default function CollaborationsPage() {
                                         {/* BRAND VIEW: Marking Active Deals as Completed */}
                                         {isBrand && collab.status === 'active' && (
                                             <Button
-                                                className="w-full"
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white"
                                                 onClick={() => updateStatus(collab.id, 'completed')}
                                             >
                                                 Mark as Completed
@@ -266,6 +347,39 @@ export default function CollaborationsPage() {
                         ))}
                     </div>
                 )}
+
+                {/* Propose Counter Offer Modal */}
+                <Dialog open={isProposeModalOpen} onOpenChange={setIsProposeModalOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Counter Offer</DialogTitle>
+                            <DialogDescription>
+                                Propose a different deal amount to the brand. They will review it and can choose to accept or decline.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-medium">Your Proposed Amount ($)</label>
+                                <Input 
+                                    type="number" 
+                                    min="1" 
+                                    placeholder="e.g. 150" 
+                                    value={proposedAmount} 
+                                    onChange={(e) => setProposedAmount(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsProposeModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleProposeSubmit}>
+                                Send Counter Offer
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
             </div>
         </PlatformLayout>
     );
