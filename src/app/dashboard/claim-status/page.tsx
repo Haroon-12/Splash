@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlatformLayout } from "@/components/platform/platform-layout";
@@ -34,7 +34,7 @@ interface ClaimStatus {
   userEmail: string;
 }
 
-export default function ClaimStatusPage() {
+function ClaimStatusContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -278,5 +278,19 @@ export default function ClaimStatusPage() {
         </motion.div>
       </div>
     </PlatformLayout>
+  );
+}
+
+export default function ClaimStatusPage() {
+  return (
+    <Suspense fallback={
+      <PlatformLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </PlatformLayout>
+    }>
+      <ClaimStatusContent />
+    </Suspense>
   );
 }
