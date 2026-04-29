@@ -51,10 +51,10 @@ export async function GET(
       campaign,
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching campaign:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch campaign' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch campaign' },
       { status: 500 }
     );
   }
@@ -133,10 +133,10 @@ export async function PATCH(
       campaign: updatedCampaign[0],
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating campaign:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update campaign' },
+      { error: error instanceof Error ? error.message : 'Failed to update campaign' },
       { status: 500 }
     );
   }
@@ -187,10 +187,10 @@ export async function DELETE(
       message: 'Campaign deleted successfully',
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting campaign:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete campaign' },
+      { error: error instanceof Error ? error.message : 'Failed to delete campaign' },
       { status: 500 }
     );
   }

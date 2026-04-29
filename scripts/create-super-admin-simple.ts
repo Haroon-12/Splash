@@ -35,7 +35,7 @@ async function createSuperAdmin() {
         createdAt: new Date(),
         updatedAt: new Date(),
       })
-      .returning();
+      .returning() as Array<{ id: string; name: string | null; email: string }>;
 
     console.log("Admin user created with ID:", adminUser[0].id);
 

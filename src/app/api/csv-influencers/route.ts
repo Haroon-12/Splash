@@ -57,7 +57,7 @@ function getCSVData(): CSVInfluencer[] {
 
       // For this specific CSV format, we know the structure
       // Name is first field, might contain commas in parentheses
-      const values = [];
+      const values: string[] = [];
       let current = '';
       let parenCount = 0;
 
@@ -78,7 +78,7 @@ function getCSVData(): CSVInfluencer[] {
       }
       values.push(current.trim()); // Add the last value
 
-      const record = {};
+      const record: any = {};
       headers.forEach((header, index) => {
         record[header] = values[index] || '';
       });

@@ -37,10 +37,10 @@ export async function GET(request: NextRequest) {
       count: recommendations.length,
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error getting browse recommendations:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to get recommendations' },
+      { error: error instanceof Error ? error.message : 'Failed to get recommendations' },
       { status: 500 }
     );
   }

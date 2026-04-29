@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const [updatedUser] = await db.update(user).set({ 
       userType: userType,
       isApproved: true // Auto-approve new users
-    }).where(eq(user.id, userId)).returning();
+    }).where(eq(user.id, userId)).returning() as any[];
 
     if (!updatedUser) {
       return NextResponse.json({ 

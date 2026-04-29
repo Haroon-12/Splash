@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
         isApproved: userRecord.isApproved || false,
         isSuspended: !userRecord.isApproved, // Use isApproved as suspension status
         createdAt: userRecord.createdAt?.toISOString() || new Date().toISOString(),
-        lastLogin: userAccount?.lastLogin?.toISOString() || null,
-        csvRecordId: userRecord.csvRecordId || null,
+        lastLogin: userAccount?.updatedAt?.toISOString() || null,
+        csvRecordId: null,
         profileCompleteness
       };
     }));

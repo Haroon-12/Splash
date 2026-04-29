@@ -8,25 +8,22 @@ async function createSuperAdmin() {
     console.log("Creating super admin account...");
 
     // Create the super admin user
-    const { data, error } = await auth.api.signUpEmail({
+    const result = await auth.api.signUpEmail({
       body: {
         email: "admin@splash.com",
         password: "Admin123!@#",
         name: "Super Admin",
       },
-    });
+    }) as { user?: { id: string } } | null;
 
-    if (error) {
-      console.error("Error creating admin user:", error);
+    const userId = result?.user?.id;
+
+    if (!userId) {
+      console.error("No user ID returned — user may already exist.");
       return;
     }
 
-    if (!data?.user?.id) {
-      console.error("No user ID returned");
-      return;
-    }
-
-    console.log("Admin user created with ID:", data.user.id);
+    console.log("Admin user created with ID:", userId);
 
     // Update user type to admin
     await db
@@ -34,15 +31,15 @@ async function createSuperAdmin() {
       .set({ 
         userType: "admin",
         isApproved: true,
-        approvedBy: data.user.id, // Self-approved
+        approvedBy: userId, // Self-approved
         approvedAt: new Date()
       })
-      .where(eq(user.id, data.user.id));
+      .where(eq(user.id, userId));
 
     // Create admin account record
     await db.insert(adminAccounts).values({
-      id: data.user.id,
-      createdBy: data.user.id, // Self-created
+      id: userId,
+      createdBy: userId, // Self-created
       permissions: JSON.stringify(["all"]),
       isSuperAdmin: true,
     });

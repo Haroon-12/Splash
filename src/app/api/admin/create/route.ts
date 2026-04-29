@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       approvedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
-    }).returning();
+    }).returning() as any[];
 
     // Create account record for password authentication
     await db.insert(account).values({
@@ -92,11 +92,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('POST error:', error);
 
+    const errorMessage = error instanceof Error ? error.message : '';
+
     // Check for unique constraint violation (email already exists)
-    if (error.message && (error.message.includes('UNIQUE constraint failed') || error.message.toLowerCase().includes('unique'))) {
+    if (errorMessage && (errorMessage.includes('UNIQUE constraint failed') || errorMessage.toLowerCase().includes('unique'))) {
       return NextResponse.json(
         { error: 'Email already exists', code: 'EMAIL_EXISTS' },
         { status: 409 }
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Internal server error: ' + error },
+      { error: 'Internal server error: ' + (error instanceof Error ? error.message : String(error)) },
       { status: 500 }
     );
   }

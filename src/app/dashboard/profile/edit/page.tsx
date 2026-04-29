@@ -210,6 +210,7 @@ export default function ProfileEditPage() {
             previousBrands: data.profile.previousBrands || "",
             gender: data.profile.gender || "",
             activeHours: data.profile.activeHours || "",
+            notes: data.profile.notes || "",
             instagramFollowers: data.profile.instagramFollowers || "",
             instagramLikes: data.profile.instagramLikes || "",
             instagramViews: data.profile.instagramViews || "",
@@ -260,7 +261,7 @@ export default function ProfileEditPage() {
     }
   };
 
-  const fetchCSVData = async (email: string, name: string) => {
+  const fetchCSVData = async (email: string | undefined | null, name: string | undefined | null) => {
     try {
       // Try multiple search strategies for better matching
       const searchParams = new URLSearchParams();

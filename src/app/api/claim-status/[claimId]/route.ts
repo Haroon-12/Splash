@@ -58,10 +58,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching claim status:', error);
     return NextResponse.json({ 
-      error: error.message || 'Failed to fetch claim status' 
+      error: error instanceof Error ? error.message : 'Failed to fetch claim status' 
     }, { status: 500 });
   }
 }

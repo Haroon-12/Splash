@@ -44,6 +44,7 @@ interface ProfileClaim {
   reviewedBy: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
+  registrationData?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   userName: string;
@@ -413,10 +414,10 @@ export default function AdminClaimsPage() {
                                       <div className="flex gap-4">
                                         <div className="w-32 h-32 bg-muted rounded-lg overflow-hidden border flex-shrink-0">
                                           <img
-                                            src={claim.idDocument.fileUrl}
+                                            src={claim.idDocument?.fileUrl}
                                             alt="ID Document"
                                             className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                            onClick={() => window.open(claim.idDocument.fileUrl, '_blank')}
+                                            onClick={() => claim.idDocument && window.open(claim.idDocument.fileUrl, '_blank')}
                                             onError={(e) => {
                                               e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SW1hZ2UgRXJyb3I8L3RleHQ+PC9zdmc+';
                                             }}
@@ -424,15 +425,15 @@ export default function AdminClaimsPage() {
                                         </div>
                                         <div className="flex-1 space-y-2">
                                           <p className="font-medium text-sm">
-                                            {claim.idDocument.originalName}
+                                            {claim.idDocument?.originalName}
                                           </p>
                                           <p className="text-xs text-muted-foreground">
-                                            {(claim.idDocument.size / 1024).toFixed(1)} KB • {claim.idDocument.type.split('/')[1]?.toUpperCase()}
+                                            {(Number(claim.idDocument?.size) / 1024).toFixed(1)} KB • {claim.idDocument?.type?.split('/')[1]?.toUpperCase()}
                                           </p>
                                           <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => window.open(claim.idDocument.fileUrl, '_blank')}
+                                            onClick={() => claim.idDocument && window.open(claim.idDocument.fileUrl, '_blank')}
                                             className="mt-2"
                                           >
                                             <Eye className="w-4 h-4 mr-2" />

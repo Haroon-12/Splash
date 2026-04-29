@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating profile claim:', error);
     return NextResponse.json({ 
       error: 'Failed to create profile claim',
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
   }
 }

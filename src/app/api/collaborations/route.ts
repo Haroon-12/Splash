@@ -91,9 +91,9 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ collaborations: Array.from(uniqueCollabs.values()) }, { status: 200 });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error fetching collaborations:', error);
-        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -150,9 +150,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, collaboration: newCollab[0] }, { status: 201 });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error creating collaboration:', error);
-        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -242,8 +242,8 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ success: true }, { status: 200 });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error updating collaboration:', error);
-        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 });
     }
 }

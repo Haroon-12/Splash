@@ -73,10 +73,10 @@ export async function GET(
       count: enrichedRecommendations.length,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error getting campaign recommendations:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to get recommendations' },
+      { error: error instanceof Error ? error.message : 'Failed to get recommendations' },
       { status: 500 }
     );
   }

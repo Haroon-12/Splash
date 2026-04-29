@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
       campaigns: campaignsWithBrands,
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching active campaigns:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch active campaigns' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch active campaigns' },
       { status: 500 }
     );
   }

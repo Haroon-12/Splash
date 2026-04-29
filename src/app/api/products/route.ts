@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
       products: brandProducts,
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch products' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch products' },
       { status: 500 }
     );
   }
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest) {
       product: newProduct[0],
     }, { status: 201 });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating product:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create product' },
+      { error: error instanceof Error ? error.message : 'Failed to create product' },
       { status: 500 }
     );
   }

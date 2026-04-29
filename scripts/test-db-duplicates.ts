@@ -9,7 +9,7 @@ async function main() {
     });
 
     const dbNames = new Map();
-    const dbDuplicates = [];
+    const dbDuplicates: string[] = [];
 
     users.forEach(u => {
         if (!u.name) return;
