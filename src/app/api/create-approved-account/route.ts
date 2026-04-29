@@ -135,13 +135,19 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(registrationData.password, 10);
 
+    // Generate ID automatically
+    const id = `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
     // Create user account
     const newUser = await db.insert(user).values({
+      id: id,
       email: registrationData.email,
       name: registrationData.name,
       userType: registrationData.userType,
       isApproved: true, // Auto-approve since admin approved the claim
-    }).returning();
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning() as any[];
 
     if (newUser.length === 0) {
       throw new Error('Failed to create user');
@@ -151,8 +157,13 @@ export async function POST(request: NextRequest) {
 
     // Create account record
     await db.insert(account).values({
+      id: `account-${id}`,
+      accountId: registrationData.email,
+      providerId: 'credential',
       userId: userId,
       password: hashedPassword,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     // Find CSV data for this user
@@ -218,7 +229,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating account for approved claim:', error);
     return NextResponse.json({
       error: 'Failed to create account for approved claim',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
