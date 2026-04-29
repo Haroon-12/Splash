@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { conversations, user, influencerProfiles } from '@/db/schema';
+import { conversations, user, influencerProfiles, subscriptions } from '@/db/schema';
 import { eq, or, and, desc, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -173,6 +173,33 @@ export async function POST(request: NextRequest) {
           message: 'This influencer hasn\'t joined the platform yet. Please view their profile for contact information.'
         },
         { status: 404 }
+      );
+    }
+
+    // Chat Access Check for Brands
+    const checkBrandSubscription = async (usr: any) => {
+      if (usr.userType === "brand") {
+        const sub = await db.query.subscriptions.findFirst({
+          where: eq(subscriptions.brandId, usr.id),
+        });
+        const planType = sub?.status === "active" ? sub.planType : "basic";
+        if (planType === "basic") {
+          return true; // restricted
+        }
+      }
+      return false;
+    };
+
+    const isUser1Restricted = await checkBrandSubscription(user1[0]);
+    const isUser2Restricted = await checkBrandSubscription(user2[0]);
+
+    if (isUser1Restricted || isUser2Restricted) {
+      return NextResponse.json(
+        { 
+          error: 'Chat is not available for Free plan brands. Please upgrade to start a conversation.', 
+          code: 'PLAN_UPGRADE_REQUIRED' 
+        },
+        { status: 403 }
       );
     }
 
