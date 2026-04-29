@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +21,7 @@ import {
   Edit3,
   UserPlus,
   Handshake,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient, useSession } from "@/lib/auth-client";
@@ -39,6 +40,19 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
 
   const userType = (session?.user as any)?.userType;
   const isAdmin = userType === "admin";
+  
+  const [subscription, setSubscription] = useState<any>(null);
+
+  useEffect(() => {
+    if (userType === "brand") {
+      fetch("/api/user/subscription")
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.error) setSubscription(data);
+        })
+        .catch(() => {});
+    }
+  }, [userType]);
 
   const navigation = [
     {
@@ -90,6 +104,18 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
       href: "/dashboard/analytics",
       icon: BarChart3,
       show: userType === "brand" || isAdmin,
+    },
+    {
+      name: "Billing & Plans",
+      href: "/billing",
+      icon: CreditCard,
+      show: userType === "brand",
+    },
+    {
+      name: "Team Management",
+      href: "/dashboard/team",
+      icon: Users,
+      show: userType === "brand" && subscription?.planType === "team",
     },
   ];
 
