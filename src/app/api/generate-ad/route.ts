@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { auth } from "@/lib/auth";
 import Replicate from "replicate";
+import { db } from "@/db";
+import { adGenerations } from "@/db/schema";
+import { eq, gte, and, count } from "drizzle-orm";
+import { getUserSubscription } from "@/lib/subscription";
 
 // Initialize Gemini for Text Generation
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "dummy_key_for_setup" });
@@ -16,6 +20,46 @@ export async function POST(req: NextRequest) {
         const session = await auth.api.getSession({ headers: req.headers });
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const currentUser = session.user as any;
+        const isBrand = currentUser.userType === "brand";
+        
+        if (!isBrand) {
+            return NextResponse.json({ error: "Only brands can generate ad creatives." }, { status: 403 });
+        }
+
+        // --- SUBSCRIPTION & USAGE LIMIT CHECK ---
+        const sub = await getUserSubscription(currentUser.id);
+
+        const planType = sub?.status === "active" ? sub.planType : "basic";
+        
+        if (planType === "basic") {
+            return NextResponse.json({ error: "Free plan does not include ad generations. Please upgrade your plan." }, { status: 403 });
+        }
+
+        if (planType === "tier1") {
+            const isYearly = sub?.billingInterval === "yearly";
+            const maxGenerations = isYearly ? 150 : 10;
+            
+            const periodStart = sub?.currentPeriodStart || new Date(new Date().setDate(1));
+            
+            const usageResult = await db.select({ count: count() })
+                .from(adGenerations)
+                .where(
+                    and(
+                        eq(adGenerations.brandId, currentUser.id),
+                        gte(adGenerations.createdAt, periodStart)
+                    )
+                );
+                
+            const usageCount = usageResult[0].count;
+            
+            if (usageCount >= maxGenerations) {
+                return NextResponse.json({ 
+                    error: `You have reached your limit of ${maxGenerations} ad generations for this ${isYearly ? 'year' : 'month'}.` 
+                }, { status: 403 });
+            }
         }
 
         const body = await req.json();
@@ -131,6 +175,13 @@ export async function POST(req: NextRequest) {
         } else {
             console.log("No REPLICATE_API_TOKEN found, using placeholder image.");
         }
+
+        // Log the successful ad generation
+        await db.insert(adGenerations).values({
+            brandId: currentUser.id,
+            prompt: imagePrompt,
+            createdAt: new Date(),
+        });
 
         return NextResponse.json({
             imageUrl,
