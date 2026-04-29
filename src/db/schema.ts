@@ -135,6 +135,8 @@ export const influencerProfiles = sqliteTable("influencer_profiles", {
   contentPreferences: text("content_preferences"), // JSON string for content types
   geographicReach: text("geographic_reach"), // JSON string for locations
   verificationBadges: text("verification_badges"), // JSON string for verified platforms
+  stripeAccountId: text("stripe_account_id"), // Stripe Connect account ID
+  stripeConnectStatus: text("stripe_connect_status").$defaultFn(() => "pending"), // pending, active, restricted
   embedding: text("embedding"), // JSON string for vector embedding
   embeddingText: text("embedding_text"), // Text used to generate embedding
   lastProfileUpdate: integer("last_profile_update", { mode: "timestamp" }),
@@ -300,6 +302,10 @@ export const collaborations = sqliteTable("collaborations", {
   campaignId: integer("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
   productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
   status: text("status").notNull().$defaultFn(() => "pending"), // pending, active, completed, cancelled
+  dealAmount: integer("deal_amount"), // Initial amount offered by brand in cents (e.g. 10000 = $100)
+  proposedAmount: integer("proposed_amount"), // Amount proposed during negotiation in cents
+  negotiationStatus: text("negotiation_status").$defaultFn(() => "none"), // none, pending_influencer, pending_brand, accepted, rejected
+  paymentStatus: text("payment_status").$defaultFn(() => "unfunded"), // unfunded, funded, released
   rating: integer("rating"), // 1-5 rating from brand
   influencerRating: integer("influencer_rating"), // 1-5 rating from influencer
   performanceMetrics: text("performance_metrics"), // JSON string for engagement, reach, etc.
@@ -339,6 +345,76 @@ export const clickEvents = sqliteTable("click_events", {
   deviceType: text("device_type"), // Parsed: 'mobile', 'desktop', 'tablet'
   referrer: text("referrer"), // Which site they came from (Instagram, YouTube, etc.)
   country: text("country"), // Geo-location if possible
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Brand Subscriptions
+export const subscriptions = sqliteTable("subscriptions", {
+  id: text("id").primaryKey(),
+  brandId: text("brand_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  planType: text("plan_type").notNull().$defaultFn(() => "basic"), // basic, tier1, premium, team
+  billingInterval: text("billing_interval"), // monthly, yearly
+  status: text("status").notNull().$defaultFn(() => "inactive"), // active, past_due, canceled, inactive
+  currentPeriodStart: integer("current_period_start", { mode: "timestamp" }),
+  currentPeriodEnd: integer("current_period_end", { mode: "timestamp" }),
+  cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" })
+    .$defaultFn(() => false)
+    .notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Teams/Workspaces for Team Plans
+export const teams = sqliteTable("teams", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const teamMembers = sqliteTable("team_members", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  teamId: text("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  role: text("role").notNull().$defaultFn(() => "member"), // admin, member
+  joinedAt: integer("joined_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Escrow Transactions
+export const escrowTransactions = sqliteTable("escrow_transactions", {
+  id: text("id").primaryKey(),
+  collaborationId: integer("collaboration_id").notNull().references(() => collaborations.id, { onDelete: "cascade" }),
+  brandId: text("brand_id").notNull().references(() => user.id),
+  influencerId: text("influencer_id").notNull().references(() => user.id),
+  baseAmount: integer("base_amount").notNull(), // in cents
+  brandFee: integer("brand_fee").notNull(), // 7% in cents
+  influencerFee: integer("influencer_fee").notNull(), // 7% in cents
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeTransferId: text("stripe_transfer_id"),
+  status: text("status").notNull().$defaultFn(() => "pending"), // pending, held, released, refunded
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  releasedAt: integer("released_at", { mode: "timestamp" }),
+});
+
+// Ad Generation Tracking
+export const adGenerations = sqliteTable("ad_generations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  brandId: text("brand_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  prompt: text("prompt"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .$defaultFn(() => new Date())
     .notNull(),
