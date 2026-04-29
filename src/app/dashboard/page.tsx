@@ -24,6 +24,7 @@ import Link from "next/link";
 export default function DashboardPage() {
   const { data: session, isPending } = useSession();
   const [stats, setStats] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Debug session data
@@ -46,22 +47,19 @@ export default function DashboardPage() {
       console.log('Fetching dashboard stats for user:', session.user);
 
       try {
-        const response = await fetch('/api/dashboard/stats', {
-          credentials: 'include',
-        });
+        const [statsRes, subRes] = await Promise.all([
+          fetch('/api/dashboard/stats', { credentials: 'include' }),
+          fetch('/api/user/subscription')
+        ]);
 
-        console.log('Stats API response status:', response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Stats API response data:', data);
-          setStats(data);
-        } else {
-          const errorText = await response.text();
-          console.error('Failed to fetch dashboard stats:', response.status, errorText);
+        if (statsRes.ok) {
+          setStats(await statsRes.json());
+        }
+        if (subRes.ok) {
+          setSubscription(await subRes.json());
         }
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
@@ -108,7 +106,7 @@ export default function DashboardPage() {
         { label: "Active Campaigns", value: stats?.activeCampaigns?.toString() || "0", icon: Sparkles, color: "text-purple-500" },
         { label: "Influencers Connected", value: stats?.influencersConnected?.toString() || "0", icon: Users, color: "text-blue-500" },
         { label: "Messages", value: stats?.messagesCount?.toString() || "0", icon: MessageSquare, color: "text-green-500" },
-        { label: "Tracked Clicks", value: `${stats?.totalClicks || "0"}`, icon: BarChart3, color: "text-indigo-500" },
+        { label: "Tracked Clicks", value: subscription?.planType === "basic" ? "0" : `${stats?.totalClicks || "0"}`, icon: BarChart3, color: "text-indigo-500" },
       ]
       : [
         { label: "Active Campaigns", value: stats?.activeCampaigns?.toString() || "0", icon: Sparkles, color: "text-purple-500" },
