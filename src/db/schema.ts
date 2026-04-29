@@ -15,8 +15,13 @@ export const user = sqliteTable("user", {
   isApproved: integer("is_approved", { mode: "boolean" })
     .$defaultFn(() => false)
     .notNull(),
-  approvedBy: text("approved_by").references(() => user.id),
+  approvedBy: text("approved_by"),
+  csvRecordId: text("csv_record_id"),
   approvedAt: integer("approved_at", { mode: "timestamp" }),
+  isSuspended: integer("is_suspended", { mode: "boolean" })
+    .$defaultFn(() => false)
+    .notNull(),
+  suspensionReason: text("suspension_reason"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .$defaultFn(() => new Date())
     .notNull(),
