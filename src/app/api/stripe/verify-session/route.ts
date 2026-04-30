@@ -48,6 +48,12 @@ export async function POST(req: NextRequest) {
       where: eq(subscriptions.brandId, userId),
     });
 
+    // Helper to safely parse Stripe timestamps
+    const parseDate = (timestamp: number | null | undefined) => {
+      if (typeof timestamp !== 'number' || isNaN(timestamp)) return new Date();
+      return new Date(timestamp * 1000);
+    };
+
     if (existingSub) {
       // Update existing
       await db.update(subscriptions).set({
@@ -56,9 +62,9 @@ export async function POST(req: NextRequest) {
         planType: planType || "basic",
         billingInterval: billingInterval,
         status: stripeSub.status,
-        currentPeriodStart: new Date((stripeSub as any).current_period_start * 1000),
-        currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000),
-        cancelAtPeriodEnd: (stripeSub as any).cancel_at_period_end,
+        currentPeriodStart: parseDate(stripeSub.current_period_start),
+        currentPeriodEnd: parseDate(stripeSub.current_period_end),
+        cancelAtPeriodEnd: stripeSub.cancel_at_period_end ? 1 : 0,
         updatedAt: new Date(),
       }).where(eq(subscriptions.id, existingSub.id));
     } else {
@@ -71,9 +77,9 @@ export async function POST(req: NextRequest) {
         planType: planType || "basic",
         billingInterval: billingInterval,
         status: stripeSub.status,
-        currentPeriodStart: new Date((stripeSub as any).current_period_start * 1000),
-        currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000),
-        cancelAtPeriodEnd: (stripeSub as any).cancel_at_period_end,
+        currentPeriodStart: parseDate(stripeSub.current_period_start),
+        currentPeriodEnd: parseDate(stripeSub.current_period_end),
+        cancelAtPeriodEnd: stripeSub.cancel_at_period_end ? 1 : 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
