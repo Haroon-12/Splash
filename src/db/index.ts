@@ -7,6 +7,11 @@ import * as schema from '@/db/schema';
 // Support both local SQLite and remote Turso (LibSQL)
 const isTursoEnabled = process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUTH_TOKEN;
 
+console.log("Runtime DB Check:", {
+  hasUrl: !!process.env.TURSO_CONNECTION_URL,
+  hasToken: !!process.env.TURSO_AUTH_TOKEN,
+  isTurso: isTursoEnabled
+});
 function getDb() {
   if (isTursoEnabled) {
     console.log("Initializing Turso Database connection...");

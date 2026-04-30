@@ -4,6 +4,12 @@ import { NextRequest } from 'next/server';
 import { headers } from "next/headers"
 import { db } from "@/db";
  
+console.log("Auth Initialization Check:", {
+  hasSecret: !!process.env.BETTER_AUTH_SECRET,
+  hasUrl: !!process.env.BETTER_AUTH_URL,
+  url: process.env.BETTER_AUTH_URL
+});
+
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "sqlite",
