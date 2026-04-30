@@ -66,9 +66,9 @@ export async function POST(req: NextRequest) {
         planType: planType || "basic",
         billingInterval: billingInterval,
         status: stripeSub.status,
-        currentPeriodStart: parseDate(stripeSub.current_period_start),
-        currentPeriodEnd: parseDate(stripeSub.current_period_end, true),
-        cancelAtPeriodEnd: stripeSub.cancel_at_period_end ? 1 : 0,
+        currentPeriodStart: parseDate((stripeSub as any).current_period_start),
+        currentPeriodEnd: parseDate((stripeSub as any).current_period_end, true),
+        cancelAtPeriodEnd: !!(stripeSub as any).cancel_at_period_end,
         updatedAt: new Date(),
       }).where(eq(subscriptions.id, existingSub.id));
     } else {
@@ -81,9 +81,9 @@ export async function POST(req: NextRequest) {
         planType: planType || "basic",
         billingInterval: billingInterval,
         status: stripeSub.status,
-        currentPeriodStart: parseDate(stripeSub.current_period_start),
-        currentPeriodEnd: parseDate(stripeSub.current_period_end, true),
-        cancelAtPeriodEnd: stripeSub.cancel_at_period_end ? 1 : 0,
+        currentPeriodStart: parseDate((stripeSub as any).current_period_start),
+        currentPeriodEnd: parseDate((stripeSub as any).current_period_end, true),
+        cancelAtPeriodEnd: !!(stripeSub as any).cancel_at_period_end,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
