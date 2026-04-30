@@ -3,13 +3,17 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
  
 export async function middleware(request: NextRequest) {
-	const session = await auth.api.getSession({
-		headers: await headers()
-	})
- 
-	if(!session) {
-		return NextResponse.redirect(new URL("/login", request.url));
-	}
+	try {
+		console.log(`Middleware checking session for: ${request.nextUrl.pathname}`);
+		const session = await auth.api.getSession({
+			headers: await headers()
+		});
+
+		if (!session) {
+			console.log("No session found, redirecting to /login");
+			return NextResponse.redirect(new URL("/login", request.url));
+		}
+		console.log(`Session verified for user: ${session.user.email}`);
 
 	// Check if accessing admin routes
 	if (request.nextUrl.pathname.startsWith("/admin")) {
@@ -19,7 +23,13 @@ export async function middleware(request: NextRequest) {
 		}
 	}
  
-	return NextResponse.next();
+		return NextResponse.next();
+	} catch (error) {
+		console.error("Middleware session check error (ignoring to avoid loop):", error);
+		// If the database is timing out, don't kick the user out. 
+		// Let the page handle the session state or try again.
+		return NextResponse.next();
+	}
 }
  
 export const config = {
