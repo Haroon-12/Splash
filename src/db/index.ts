@@ -9,12 +9,14 @@ const isTursoEnabled = process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUT
 
 function getDb() {
   if (isTursoEnabled) {
+    console.log("Initializing Turso Database connection...");
     const client = createClient({
       url: process.env.TURSO_CONNECTION_URL!,
       authToken: process.env.TURSO_AUTH_TOKEN!,
     });
     return drizzle(client, { schema });
   } else {
+    console.log("Initializing local SQLite Database (local.db)...");
     const sqlite = new Database('local.db');
     return drizzleSqlite(sqlite, { schema });
   }
