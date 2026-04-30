@@ -13,6 +13,9 @@ console.log("DB Initialization Status:", {
 if (!isTursoEnabled && process.env.NODE_ENV === "production") {
   console.error("CRITICAL: Turso environment variables are missing in production!");
 }
+
+const dbConfig: Config = defineConfig({
+  schema: './src/db/schema.ts',
   out: './drizzle',
   dialect: isTursoEnabled ? 'turso' : 'sqlite',
   dbCredentials: {
