@@ -49,8 +49,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Helper to safely parse Stripe timestamps
-    const parseDate = (timestamp: number | null | undefined) => {
-      if (typeof timestamp !== 'number' || isNaN(timestamp)) return new Date();
+    const parseDate = (timestamp: number | null | undefined, isEnd: boolean = false) => {
+      if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+        const d = new Date();
+        if (isEnd) d.setDate(d.getDate() + 30);
+        return d;
+      }
       return new Date(timestamp * 1000);
     };
 
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
         billingInterval: billingInterval,
         status: stripeSub.status,
         currentPeriodStart: parseDate(stripeSub.current_period_start),
-        currentPeriodEnd: parseDate(stripeSub.current_period_end),
+        currentPeriodEnd: parseDate(stripeSub.current_period_end, true),
         cancelAtPeriodEnd: stripeSub.cancel_at_period_end ? 1 : 0,
         updatedAt: new Date(),
       }).where(eq(subscriptions.id, existingSub.id));
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
         billingInterval: billingInterval,
         status: stripeSub.status,
         currentPeriodStart: parseDate(stripeSub.current_period_start),
-        currentPeriodEnd: parseDate(stripeSub.current_period_end),
+        currentPeriodEnd: parseDate(stripeSub.current_period_end, true),
         cancelAtPeriodEnd: stripeSub.cancel_at_period_end ? 1 : 0,
         createdAt: new Date(),
         updatedAt: new Date(),
