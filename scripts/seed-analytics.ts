@@ -1,78 +1,84 @@
-import { db } from "../src/db";
-import { user, affiliateLinks, clickEvents } from "../src/db/schema";
-import { eq, and } from "drizzle-orm";
+import { db } from '../src/db';
+import { user, affiliateLinks, clickEvents } from '../src/db/schema';
+import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
-async function run() {
-  console.log("Looking up user haroonmust123@gmail.com...");
-  const targetUser = await db.query.user.findFirst({
-    where: eq(user.email, "haroonmust123@gmail.com")
-  });
-
-  if (!targetUser) {
-    console.error("User not found!");
+async function main() {
+  const email = "haroonmust123@gmail.com";
+  console.log(`Looking for user: ${email}...`);
+  
+  const targetUserList = await db.select().from(user).where(eq(user.email, email));
+  if (targetUserList.length === 0) {
+    console.error("User not found in DB! Creating dummy user or failing...");
     return;
   }
-  console.log(`Found user: ${targetUser.id}`);
+  const targetUser = targetUserList[0];
+  console.log(`Found user ID: ${targetUser.id}`);
 
-  console.log("Finding their active tracking links...");
-  const links = await db.query.affiliateLinks.findMany({
-    where: and(
-        eq(affiliateLinks.brandId, targetUser.id),
-        eq(affiliateLinks.isActive, true)
-    )
-  });
-
+  let links = await db.select().from(affiliateLinks).where(eq(affiliateLinks.brandId, targetUser.id));
   if (links.length === 0) {
-    console.error("No active tracking links found for this user!");
-    return;
+    links = await db.select().from(affiliateLinks).where(eq(affiliateLinks.influencerId, targetUser.id));
   }
 
-  console.log(`Found ${links.length} active links.`);
-
-  // Update createdAt date of links to early January
-  const startDate = new Date('2026-01-05T10:00:00Z');
-  const endDate = new Date('2026-04-17T10:00:00Z'); // Today's simulated date
-
-  for (const link of links) {
-    const randomLinkDate = new Date(startDate.getTime() + Math.random() * (7 * 24 * 60 * 60 * 1000)); // First week of Jan
-    await db.update(affiliateLinks)
-      .set({ createdAt: randomLinkDate })
-      .where(eq(affiliateLinks.id, link.id));
-    console.log(`Updated link ${link.id} createdAt to ${randomLinkDate.toISOString()}`);
-  }
-
-  // Delete old clicks just to make sure we don't end up with a mess
-  // Wait, user said "use the already generated clicks and range of jan- april".
-  // Let's just generate brand new 100 clicks.
-  console.log("Generating 100 random clicks across all links from Jan-April...");
-
-  const platforms = ['Instagram', 'YouTube', 'TikTok', 'Direct'];
-  const devices = ['mobile', 'desktop', 'tablet'];
-
-  for (let i = 0; i < 100; i++) {
-    const randomLink = links[Math.floor(Math.random() * links.length)];
-    
-    // Random date between startDate and endDate
-    // Prefer dates closer to the end, just for a nice rising graph shape
-    const randomFraction = Math.pow(Math.random(), 0.7); // slightly skews to right
-    const randomTime = startDate.getTime() + (randomFraction * (endDate.getTime() - startDate.getTime()));
-    const clickDate = new Date(randomTime);
-
-    // Make sure clickDate is after the link's creation date (it will be since link creation date is first few days of Jan)
-    
-    await db.insert(clickEvents).values({
-      linkId: randomLink.id,
-      ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-      userAgent: 'Mozilla/5.0 (Mocked User Agent)',
-      deviceType: devices[Math.floor(Math.random() * devices.length)],
-      referrer: platforms[Math.floor(Math.random() * platforms.length)],
-      country: Math.random() > 0.5 ? 'US' : 'GB',
-      createdAt: clickDate
+  let linkId;
+  if (links.length > 0) {
+    linkId = links[0].id;
+    console.log(`Found existing link: ${linkId}`);
+  } else {
+    linkId = randomUUID().substring(0, 8);
+    console.log(`Creating new link: ${linkId}`);
+    await db.insert(affiliateLinks).values({
+      id: linkId,
+      brandId: targetUser.id, 
+      influencerId: targetUser.id,
+      destinationUrl: "https://example.com/store",
+      title: "Spring Campaign Link",
+      createdAt: new Date("2026-01-01T00:00:00Z"),
     });
   }
 
-  console.log("Successfully backpopulated 100 clicks!");
+  // Generate clicks from Jan 2026 to May 2026
+  console.log("Generating realistic click data...");
+  
+  const startDate = new Date('2026-01-01T00:00:00Z').getTime();
+  const endDate = new Date().getTime(); // Today
+  
+  const clicksToGenerate = 850;
+  
+  const chunk1 = [];
+  for(let i=0; i<clicksToGenerate; i++) {
+    // Bias towards more recent dates to make the chart look nice and active
+    let randomTime = startDate + Math.random() * (endDate - startDate);
+    if (Math.random() > 0.5) {
+      randomTime = endDate - (Math.random() * 1000 * 60 * 60 * 24 * 60); // Bias last 60 days
+    }
+    
+    const date = new Date(randomTime);
+    const devices = ['mobile', 'mobile', 'mobile', 'desktop', 'tablet'];
+    const referrers = ['instagram', 'instagram', 'tiktok', 'youtube', 'direct'];
+    
+    chunk1.push({
+      linkId: linkId,
+      ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
+      deviceType: devices[Math.floor(Math.random() * devices.length)],
+      referrer: referrers[Math.floor(Math.random() * referrers.length)],
+      country: Math.random() > 0.7 ? 'UK' : 'US',
+      createdAt: date
+    });
+  }
+  
+  // Insert in chunks of 100
+  console.log(`Inserting ${clicksToGenerate} clicks in chunks...`);
+  for (let i = 0; i < chunk1.length; i += 100) {
+    const chunk = chunk1.slice(i, i + 100);
+    await db.insert(clickEvents).values(chunk);
+  }
+  
+  console.log(`✅ Successfully generated ${clicksToGenerate} analytics clicks for ${email}!`);
   process.exit(0);
 }
 
-run().catch(console.error);
+main().catch((err) => {
+  console.error("Error running script:", err);
+  process.exit(1);
+});
