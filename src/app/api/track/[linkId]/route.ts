@@ -31,8 +31,8 @@ export async function GET(
         // IP Address extraction (Next.js edges typically forward this in x-forwarded-for)
         const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || "Unknown IP";
         
-        // Country extraction (from Vercel or Cloudflare headers)
-        const country = headersList.get("x-vercel-ip-country") || headersList.get("cf-ipcountry") || "Unknown";
+        // Country extraction (from AWS CloudFront, Vercel, or Cloudflare headers)
+        const country = headersList.get("cloudfront-viewer-country") || headersList.get("x-vercel-ip-country") || headersList.get("cf-ipcountry") || "Unknown";
 
         // User Agent parsing (Desktop vs Mobile)
         const userAgent = headersList.get("user-agent") || "Unknown Device";
