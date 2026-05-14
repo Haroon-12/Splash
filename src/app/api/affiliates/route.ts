@@ -142,7 +142,9 @@ export async function GET(req: NextRequest) {
                 id: clickEvents.id,
                 createdAt: clickEvents.createdAt,
                 referrer: clickEvents.referrer,
-                deviceType: clickEvents.deviceType
+                deviceType: clickEvents.deviceType,
+                country: clickEvents.country,
+                ipAddress: clickEvents.ipAddress
             })
             .from(clickEvents)
             .innerJoin(affiliateLinks, eq(clickEvents.linkId, affiliateLinks.id))
@@ -184,7 +186,42 @@ export async function GET(req: NextRequest) {
             new Date(a.date).getTime() - new Date(b.date).getTime()
         );
 
-        return NextResponse.json({ links: masterLinks, chartData });
+        // Aggregate Global Metrics
+        const uniqueIps = new Set<string>();
+        const deviceMap = new Map<string, number>();
+        const countryMap = new Map<string, number>();
+        const referrerMap = new Map<string, number>();
+
+        allClicks.forEach(click => {
+            if (click.ipAddress) uniqueIps.add(click.ipAddress);
+            
+            const device = (click.deviceType || "Unknown").toLowerCase();
+            deviceMap.set(device, (deviceMap.get(device) || 0) + 1);
+
+            const country = click.country || "Unknown";
+            countryMap.set(country, (countryMap.get(country) || 0) + 1);
+
+            const ref = (click.referrer || "Direct").toLowerCase();
+            let refGroup = "Other";
+            if (ref.includes("instagram")) refGroup = "Instagram";
+            else if (ref.includes("youtube")) refGroup = "YouTube";
+            else if (ref.includes("tiktok")) refGroup = "TikTok";
+            else if (ref.includes("facebook")) refGroup = "Facebook";
+            else if (ref === "direct" || ref === "") refGroup = "Direct";
+            
+            referrerMap.set(refGroup, (referrerMap.get(refGroup) || 0) + 1);
+        });
+
+        const sortMap = (map: Map<string, number>) => Array.from(map.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+        const metrics = {
+            uniqueVisitors: uniqueIps.size,
+            devices: sortMap(deviceMap),
+            countries: sortMap(countryMap),
+            referrers: sortMap(referrerMap)
+        };
+
+        return NextResponse.json({ links: masterLinks, chartData, metrics });
 
     } catch (error) {
         console.error("Affiliate Fetch Error:", error);

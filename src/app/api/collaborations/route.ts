@@ -206,6 +206,8 @@ export async function PATCH(request: NextRequest) {
             updatePayload.dealAmount = collab.proposedAmount;
             updatePayload.proposedAmount = null;
             updatePayload.negotiationStatus = 'accepted';
+            updatePayload.status = 'active';
+            updatePayload.startedAt = new Date();
             notifTitle = "Offer Accepted! 🎉";
             notifMessage = `The brand agreed to your counter offer!`;
         } else if (status === 'active' && collab.status === 'pending') {
@@ -217,6 +219,22 @@ export async function PATCH(request: NextRequest) {
         } else if (status === 'completed') {
             updatePayload.status = 'completed';
             updatePayload.completedAt = new Date();
+            
+            // Add brand to influencer's previous collaborations
+            const b = await db.select({ name: user.name }).from(user).where(eq(user.id, collab.brandId)).limit(1);
+            const p = await db.select({ previousBrands: influencerProfiles.previousBrands }).from(influencerProfiles).where(eq(influencerProfiles.id, collab.influencerId)).limit(1);
+            
+            if (b.length > 0 && p.length > 0) {
+                const brandName = b[0].name || 'A Brand';
+                const currentBrands = p[0].previousBrands || '';
+                
+                if (!currentBrands.includes(brandName)) {
+                    const updatedBrands = currentBrands ? `${currentBrands}, ${brandName}` : brandName;
+                    await db.update(influencerProfiles)
+                        .set({ previousBrands: updatedBrands })
+                        .where(eq(influencerProfiles.id, collab.influencerId));
+                }
+            }
         } else if (status === 'cancelled') {
             updatePayload.status = 'cancelled';
             notifTitle = "Collaboration Cancelled";

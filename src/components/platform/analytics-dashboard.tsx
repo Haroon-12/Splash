@@ -5,19 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Eye, TrendingUp, Link as LinkIcon, Calendar, Copy, Check, MousePointerClick, Activity } from "lucide-react";
+import { Eye, TrendingUp, Link as LinkIcon, Calendar, Copy, Check, MousePointerClick, Activity, Globe, Smartphone, Share2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Trophy, Medal, Users } from "lucide-react";
 
 export function AnalyticsDashboard() {
     const [links, setLinks] = useState<any[]>([]);
     const [chartData, setChartData] = useState<any[]>([]);
+    const [metrics, setMetrics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -50,6 +51,7 @@ export function AnalyticsDashboard() {
                     : [{ date: format(new Date(), 'MMM dd'), totalClicks: 0 }];
 
                 setChartData(activeChartData);
+                setMetrics(data.metrics || null);
             }
 
             if (contextRes.ok) {
@@ -172,6 +174,23 @@ export function AnalyticsDashboard() {
                         </p>
                     </CardContent>
                 </Card>
+
+                <Card className="border-amber-50 shadow-sm overflow-hidden relative">
+                    <div className="absolute right-0 top-0 h-full w-32 bg-gradient-to-l from-amber-50 to-transparent opacity-50 pointer-events-none" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-slate-500">Unique Visitors</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                            <UsersIcon className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold font-heading text-slate-800">{loading ? "-" : (metrics?.uniqueVisitors || 0)}</div>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center">
+                            <Eye className="h-3 w-3 mr-1 text-amber-500" />
+                            Distinct humans reached
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Visual Traffic Chart */}
@@ -231,6 +250,111 @@ export function AnalyticsDashboard() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Detailed Analytics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {/* Device Breakdown */}
+                <Card className="border-slate-200/60 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2 text-slate-700">
+                            <Smartphone className="h-4 w-4 text-slate-400" />
+                            Device Breakdown
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-slate-300" /></div>
+                        ) : (!metrics?.devices || metrics.devices.length === 0) ? (
+                            <p className="text-sm text-muted-foreground text-center py-6">No device data yet</p>
+                        ) : (
+                            <div className="space-y-4 mt-2">
+                                {metrics.devices.map((d: any, i: number) => {
+                                    const percent = totalClicks > 0 ? Math.round((d.value / totalClicks) * 100) : 0;
+                                    return (
+                                        <div key={d.name} className="space-y-1">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="capitalize font-medium text-slate-700">{d.name}</span>
+                                                <span className="text-muted-foreground">{percent}%</span>
+                                            </div>
+                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                <div 
+                                                    className={`h-full rounded-full ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-indigo-400' : 'bg-slate-300'}`} 
+                                                    style={{ width: `${percent}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Traffic Sources */}
+                <Card className="border-slate-200/60 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2 text-slate-700">
+                            <Share2 className="h-4 w-4 text-slate-400" />
+                            Traffic Sources
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-slate-300" /></div>
+                        ) : (!metrics?.referrers || metrics.referrers.length === 0) ? (
+                            <p className="text-sm text-muted-foreground text-center py-6">No referrer data yet</p>
+                        ) : (
+                            <div className="space-y-4 mt-2">
+                                {metrics.referrers.map((r: any, i: number) => {
+                                    const percent = totalClicks > 0 ? Math.round((r.value / totalClicks) * 100) : 0;
+                                    return (
+                                        <div key={r.name} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${r.name === 'Instagram' ? 'bg-pink-500' : r.name === 'YouTube' ? 'bg-red-500' : r.name === 'TikTok' ? 'bg-black' : r.name === 'Direct' ? 'bg-slate-400' : 'bg-blue-400'}`} />
+                                                <span className="text-sm font-medium text-slate-700">{r.name}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-slate-900">{r.value}</p>
+                                                <p className="text-[10px] text-muted-foreground">{percent}%</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Top Locations */}
+                <Card className="border-slate-200/60 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2 text-slate-700">
+                            <Globe className="h-4 w-4 text-slate-400" />
+                            Top Locations
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-slate-300" /></div>
+                        ) : (!metrics?.countries || metrics.countries.length === 0) ? (
+                            <p className="text-sm text-muted-foreground text-center py-6">No location data yet</p>
+                        ) : (
+                            <div className="space-y-3 mt-2">
+                                {metrics.countries.slice(0, 5).map((c: any) => (
+                                    <div key={c.name} className="flex items-center justify-between border-b border-slate-50 last:border-0 pb-2 last:pb-0">
+                                        <span className="text-sm font-medium text-slate-700">{c.name}</span>
+                                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-mono text-xs">
+                                            {c.value}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Link Generator Tool */}
